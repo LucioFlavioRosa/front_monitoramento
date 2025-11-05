@@ -61,10 +61,15 @@
         ::-webkit-scrollbar-track { background: var(--peers-gray); }
         ::-webkit-scrollbar-thumb { background: var(--peers-blue); border-radius: 5px; }
         ::-webkit-scrollbar-thumb:hover { background: var(--peers-blue-02); }
+        /* Cabeçalho da tabela destacado */
+        #cabecalhoTabelaDinamico tr {
+            background: linear-gradient(135deg, var(--peers-blue) 0%, #023059 100%);
+            color: white;
+        }
     </style>
 </head>
 <body>
-    <header class="header-gradient text-white py-4 md:py-6 px-4 md:px-8 shadow-lg">
+    <header class="bg-peers-dark text-white py-4 md:py-6 px-4 md:px-8 shadow-lg">
         <div class="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-3">
             <img src="https://d3fh32tca5cd7q.cloudfront.net/wp-content/uploads/2025/03/logo.svg" alt="PEERS" class="h-8 md:h-10 w-auto">
             <div class="text-xs md:text-sm text-center">
@@ -246,7 +251,10 @@
             thead.innerHTML = '';
             if (!dados || dados.length === 0) {
                 // Cabeçalho padrão
-                thead.innerHTML = `<tr><th class="px-4 py-3 font-semibold text-sm sm:text-base rounded-tl-xl">Projeto</th><th class="px-4 py-3 font-semibold text-sm sm:text-base">Usuário Executor</th><th class="px-4 py-3 font-semibold text-sm sm:text-base">Modelo</th><th class="px-4 py-3 font-semibold text-sm sm:text-base">Data</th><th class="px-4 py-3 font-semibold text-sm sm:text-base rounded-tr-xl">Valor da Métrica</th></tr>`;
+                let tr = document.createElement('tr');
+                tr.className = 'bg-peers-dark text-white';
+                tr.innerHTML = `<th class="px-4 py-3 font-semibold text-sm sm:text-base rounded-tl-xl">Projeto</th><th class="px-4 py-3 font-semibold text-sm sm:text-base">Usuário Executor</th><th class="px-4 py-3 font-semibold text-sm sm:text-base">Modelo</th><th class="px-4 py-3 font-semibold text-sm sm:text-base">Data</th><th class="px-4 py-3 font-semibold text-sm sm:text-base rounded-tr-xl">Valor da Métrica</th>`;
+                thead.appendChild(tr);
                 return;
             }
             const primeiraLinha = dados[0];
@@ -284,6 +292,7 @@
             };
             // Renderizar cabeçalhos
             let tr = document.createElement('tr');
+            tr.className = 'bg-peers-dark text-white';
             ordemFinal.forEach((k, idx) => {
                 let nome = nomesAmigaveis[k] || k.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
                 let th = document.createElement('th');
