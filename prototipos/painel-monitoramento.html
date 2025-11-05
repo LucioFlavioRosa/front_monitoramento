@@ -660,6 +660,76 @@
                 });
         }
 
+        function getFilteredData() {
+            const filterProjeto = document.getElementById('filter_projeto').value;
+            const filterUsuario = document.getElementById('filter_usuario').value;
+            const filterModelo = document.getElementById('filter_modelo').value;
+            return dadosConsulta.filter(row => {
+                const projMatch = (filterProjeto === 'todos') || (row.projeto === filterProjeto);
+                const userMatch = (filterUsuario === 'todos') || (row.usuario_executor === filterUsuario);
+                const modelMatch = (filterModelo === 'todos') || (row.model_name === filterModelo);
+                return projMatch && userMatch && modelMatch;
+            });
+        }
+
+        function renderTabela() {
+            const tbody = document.getElementById('tabelaDados');
+            const dadosFiltrados = getFilteredData();
+            totalRows = dadosFiltrados.length;
+            // Gera cabeçalho dinâmico
+            gerarCabecalhosTabela(dadosFiltrados);
+            if (!dadosFiltrados.length) {
+                tbody.innerHTML = '<tr><td colspan="5" class="text-center py-4">A consulta não retornou dados (ou o filtro está muito restrito).</td></tr>';
+                document.getElementById('paginationInfo').textContent = '';
+                return;
+            }
+            // Descobre ordem das colunas
+            const primeiraLinha = dadosFiltrados[0];
+            let chaves = Object.keys(primeiraLinha);
+            const ordemPadrao = [
+                'projeto',
+                'usuario_executor',
+                'model_name',
+                'dia',
+                'data',
+                'job_id'
+            ];
+            const chavesPrincipais = ordemPadrao.filter(k => chaves.includes(k));
+            const chavesRestantes = chaves.filter(k => !ordemPadrao.includes(k));
+            const chavesMetricas = chavesRestantes.filter(k => typeof primeiraLinha[k] === 'number' || k.toLowerCase().includes('token') || k.toLowerCase().includes('valor') || k.toLowerCase().includes('count') || k.toLowerCase().includes('total'));
+            const chavesOutras = chavesRestantes.filter(k => !chavesMetricas.includes(k));
+            const ordemFinal = [...chavesPrincipais, ...chavesOutras, ...chavesMetricas];
+            // Paginação
+            const startIdx = (currentPage - 1) * pageSize;
+            const endIdx = Math.min(startIdx + pageSize, totalRows);
+            const pageRows = dadosFiltrados.slice(startIdx, endIdx);
+            tbody.innerHTML = pageRows.map((row, idx) => {
+                // Alterna cor de fundo
+                const bgClass = idx % 2 === 0 ? 'bg-gray-50' : 'bg-white';
+                const tds = ordemFinal.map(k => {
+                    let valor = row[k];
+                    if (valor === undefined || valor === null || valor === '') {
+                        return '<td class="px-4 py-3 border-b border-gray-200 transition-all duration-300"><span class="text-gray-400 italic">-</span></td>';
+                    }
+                    // Formatação especial para datas
+                    if ((k === 'dia' || k === 'data') && typeof valor === 'string' && valor.includes('T')) {
+                        valor = valor.split('T')[0];
+                    }
+                    // Formatação especial para valores numéricos
+                    if (typeof valor === 'number') {
+                        valor = `<span class="text-peers-blue font-semibold">${valor.toLocaleString('pt-BR', {maximumFractionDigits: 1})}</span>`;
+                    }
+                    return `<td class="px-4 py-3 border-b border-gray-200 transition-all duration-300">${valor}</td>`;
+                }).join('');
+                return `<tr class="${bgClass} hover:bg-peers-serene-02 transition-all duration-300">${tds}</tr>`;
+            }).join('');
+            // Paginação info
+            document.getElementById('paginationInfo').textContent = `Mostrando ${startIdx + 1} a ${endIdx} de ${totalRows} registros`;
+            // Botões
+            document.getElementById('prevPageBtn').disabled = currentPage === 1;
+            document.getElementById('nextPageBtn').disabled = endIdx >= totalRows;
+        }
+
         function renderGraficos() {
             const dadosFiltrados = getFilteredData();
 
