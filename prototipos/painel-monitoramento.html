@@ -70,23 +70,6 @@
         /* ====== Filtros Dinâmicos de Coluna ====== */
         .filter-icon {
             display: inline-block;
-
-    
-          
-            
-    
-
-          
-          Expand Down
-          
-            
-    
-
-          
-          Expand Up
-    
-    @@ -137,6 +136,11 @@
-  
             vertical-align: middle;
             margin-left: 0.25rem;
             cursor: pointer;
@@ -157,23 +140,6 @@
     </style>
 </head>
 <body>
-
-    
-          
-            
-    
-
-          
-          Expand Down
-          
-            
-    
-
-          
-          Expand Up
-    
-    @@ -213,7 +217,6 @@ <h1 class="text-3xl sm:text-4xl md:text-5xl font-bold text-peers-blue mb-3">Pain
-  
     <header class="header-gradient text-white py-4 md:py-6 px-4 md:px-8 shadow-lg">
         <div class="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-3">
             <img src="https://d3fh32tca5cd7q.cloudfront.net/wp-content/uploads/2025/03/logo.svg" alt="PEERS" class="h-8 md:h-10 w-auto">
@@ -251,23 +217,6 @@
                     <div class="flex flex-wrap gap-x-4 gap-y-2 mb-4">
                         <div>
                             <label class="block text-xs font-medium text-gray-700 mb-1">Eixo X</label>
-
-    
-          
-            
-    
-
-          
-          Expand Down
-          
-            
-    
-
-          
-          Expand Up
-    
-    @@ -243,19 +246,19 @@ <h3 class="text-lg font-bold text-peers-blue mb-2">Gráfico de Barras</h3>
-  
                             <select id="eixo_x" class="px-2 py-1 border border-gray-300 rounded-lg text-sm">
                                 <option value="dia" selected>Dia</option>
                                 <option value="projeto">Projeto</option>
@@ -310,23 +259,6 @@
                         </div>
                     </div>
                     <canvas id="barChart" height="220" aria-label="Gráfico de Barras" role="img"></canvas>
-
-    
-          
-            
-    
-
-          
-          Expand Down
-          
-            
-    
-
-          
-          Expand Up
-    
-    @@ -316,13 +319,6 @@ <h3 class="text-lg font-bold text-peers-blue mb-4">Prévia dos Dados Filtrados</
-  
                 </div>
                 <div class="bg-white rounded-2xl shadow-lg p-4 sm:p-6">
                     <h3 class="text-lg font-bold text-peers-blue mb-2">Gráfico de Pizza</h3>
@@ -393,18 +325,6 @@
         // ===================== Filtros Dinâmicos de Coluna =====================
         // Objeto que armazena o valor selecionado para cada coluna (chave: nome da coluna, valor: valor filtrado ou null)
         const filtrosPorColuna = {};
-
-    
-        
-          
-    
-
-        
-        Expand All
-    
-    @@ -331,30 +327,25 @@ <h3 class="text-lg font-bold text-peers-blue mb-4">Prévia dos Dados Filtrados</
-  
-        /**
          * Função para popular os dropdowns de filtro dinâmico em cada cabeçalho de coluna da tabela.
          * Para cada coluna, cria um dropdown com os valores únicos encontrados nos dados filtrados.
          * O valor selecionado é armazenado em filtrosPorColuna.
@@ -435,16 +355,6 @@
                 // Cria dropdown
                 const dropdown = document.createElement('div');
                 dropdown.className = 'filter-dropdown';
-
-    
-        
-          
-    
-
-        
-        Expand All
-    
-    @@ -371,9 +362,9 @@ <h3 class="text-lg font-bold text-peers-blue mb-4">Prévia dos Dados Filtrados</
   
                 dropdown.setAttribute('data-dropdown-col', col);
                 // Valores únicos
@@ -465,16 +375,6 @@
                 };
                 dropdown.appendChild(clearBtn);
                 // Opções de valor
-
-    
-        
-          
-    
-
-        
-        Expand All
-    
-    @@ -384,12 +375,19 @@ <h3 class="text-lg font-bold text-peers-blue mb-4">Prévia dos Dados Filtrados</
   
                 valoresUnicos.forEach(valor => {
                     const btn = document.createElement('button');
@@ -492,16 +392,6 @@
                 // Posiciona dropdown
                 th.style.position = 'relative';
                 th.appendChild(dropdown);
-
-    
-        
-          
-    
-
-        
-        Expand All
-    
-    @@ -403,8 +401,8 @@ <h3 class="text-lg font-bold text-peers-blue mb-4">Prévia dos Dados Filtrados</
   
                 // Evento de abrir/fechar dropdown
                 icon.onclick = function(e) {
@@ -518,22 +408,6 @@
                 if (!e.target.closest('.filter-dropdown') && !e.target.closest('.filter-icon')) {
                     document.querySelectorAll('.filter-dropdown').forEach(dd => dd.classList.remove('active'));
                 }
-
-    
-          
-            
-    
-
-          
-          Expand Down
-          
-            
-    
-
-          
-          Expand Up
-    
-    @@ -471,8 +469,6 @@ <h3 class="text-lg font-bold text-peers-blue mb-4">Prévia dos Dados Filtrados</
   
             });
         }
@@ -600,18 +474,6 @@
             // Adiciona dropdowns de filtro dinâmico
             popularDropdownsFiltro(dados, ordemFinal);
         }
-
-        /**
-
-    
-        
-          
-    
-
-        
-        Expand All
-    
-    @@ -490,7 +486,7 @@ <h3 class="text-lg font-bold text-peers-blue mb-4">Prévia dos Dados Filtrados</
   
          * Função que retorna os dados filtrados de acordo com os filtros de projeto, usuário, modelo e os filtros dinâmicos de coluna.
          * Para cada coluna com filtro ativo em filtrosPorColuna, filtra apenas as linhas que possuem o valor selecionado.
@@ -631,16 +493,6 @@
                     let cell = row[col];
                     if (cell === undefined || cell === null || cell === '') cell = '-';
                     return cell == val;
-
-    
-        
-          
-    
-
-        
-        Expand All
-    
-    @@ -502,15 +498,12 @@ <h3 class="text-lg font-bold text-peers-blue mb-4">Prévia dos Dados Filtrados</
   
                 });
                 return projMatch && userMatch && modelMatch && colFiltersMatch;
@@ -661,16 +513,6 @@
             // Gera cabeçalho dinâmico (com filtros)
             if (dadosFiltrados.length > 0) {
                 const primeiraLinha = dadosFiltrados[0];
-
-    
-        
-          
-    
-
-        
-        Expand All
-    
-    @@ -529,6 +522,7 @@ <h3 class="text-lg font-bold text-peers-blue mb-4">Prévia dos Dados Filtrados</
   
                 let chaves = Object.keys(primeiraLinha);
                 const ordemPadrao = [
@@ -690,16 +532,6 @@
                 // Paginação
                 const startIdx = (currentPage - 1) * pageSize;
                 const endIdx = Math.min(startIdx + pageSize, totalRows);
-
-    
-        
-          
-    
-
-        
-        Expand All
-    
-    @@ -555,6 +549,7 @@ <h3 class="text-lg font-bold text-peers-blue mb-4">Prévia dos Dados Filtrados</
   
                 const pageRows = dadosFiltrados.slice(startIdx, endIdx);
                 tbody.innerHTML = pageRows.map((row, idx) => {
@@ -728,21 +560,6 @@
                 document.getElementById('paginationInfo').textContent = '';
             }
 
-    
-          
-            
-    
-
-          
-          Expand Down
-          
-            
-    
-
-          
-          Expand Up
-    
-    @@ -588,7 +583,6 @@ <h3 class="text-lg font-bold text-peers-blue mb-4">Prévia dos Dados Filtrados</
   
         }
         // ===================== Fim dos Filtros Dinâmicos de Coluna =====================
@@ -775,22 +592,6 @@
         }
 
         function popularFiltros() {
-
-    
-          
-            
-    
-
-          
-          Expand Down
-          
-            
-    
-
-          
-          Expand Up
-    
-    @@ -660,198 +654,100 @@ <h3 class="text-lg font-bold text-peers-blue mb-4">Prévia dos Dados Filtrados</
   
             const projetos = new Set();
             const usuarios = new Set();
@@ -1054,17 +855,6 @@
             if (pieChart) pieChart.destroy();
             pieChart = new Chart(document.getElementById('pieChart').getContext('2d'), {
                 type: 'pie',
-
-    
-          
-            
-    
-
-          
-          Expand Down
-    
-    
-  
                 data: {
                     labels: pizzaLabels,
                     datasets: [{
