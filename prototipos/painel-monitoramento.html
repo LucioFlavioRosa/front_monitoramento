@@ -66,6 +66,77 @@
             background: linear-gradient(135deg, var(--peers-blue) 0%, #023059 100%);
             color: white;
         }
+
+        /* ====== Filtros Dinâmicos de Coluna ====== */
+        .filter-icon {
+            display: inline-block;
+            vertical-align: middle;
+            margin-left: 0.25rem;
+            cursor: pointer;
+            color: #E1FF00;
+            transition: color 0.2s;
+            font-size: 1rem;
+        }
+        .filter-icon:hover {
+            color: #F3FF99;
+        }
+        .filter-dropdown {
+            position: absolute;
+            z-index: 50;
+            min-width: 160px;
+            background: #fff;
+            border: 1px solid #CCD0D6;
+            border-radius: 0.5rem;
+            box-shadow: 0 8px 24px rgba(1,19,52,0.13);
+            padding: 0.5rem 0.25rem;
+            margin-top: 0.25rem;
+            display: none;
+            max-height: 240px;
+            overflow-y: auto;
+        }
+        .filter-dropdown.active {
+            display: block;
+        }
+        .filter-dropdown-option {
+            padding: 0.5rem 1rem;
+            cursor: pointer;
+            font-size: 0.95rem;
+            color: #011334;
+            background: transparent;
+            border: none;
+            width: 100%;
+            text-align: left;
+            transition: background 0.18s;
+        }
+        .filter-dropdown-option:hover, .filter-dropdown-option.selected {
+            background: #EFF6F8;
+            color: #023059;
+        }
+        .filter-dropdown-option.selected {
+            font-weight: 600;
+        }
+        .filter-dropdown-clear {
+            padding: 0.5rem 1rem;
+            color: #677185;
+            cursor: pointer;
+            font-size: 0.95rem;
+            background: transparent;
+            border: none;
+            width: 100%;
+            text-align: left;
+            border-top: 1px solid #CCD0D6;
+        }
+        .filter-dropdown-clear:hover {
+            background: #F5F5F5;
+            color: #011334;
+        }
+        /* Responsividade para dropdowns em telas pequenas */
+        @media (max-width: 640px) {
+            .filter-dropdown {
+                min-width: 120px;
+                font-size: 0.92rem;
+            }
+        }
     </style>
 </head>
 <body>
@@ -245,7 +316,87 @@
         const pageSize = 20;
         let totalRows = 0;
 
-        // Função para gerar cabeçalhos dinâmicos e ordenados
+        // ===================== Filtros Dinâmicos de Coluna =====================
+        // Objeto que armazena o valor selecionado para cada coluna (chave: nome da coluna, valor: valor filtrado ou null)
+        const filtrosPorColuna = {};
+
+        /**
+         * Função para popular os dropdowns de filtro dinâmico em cada cabeçalho de coluna da tabela.
+         * Para cada coluna, cria um dropdown com os valores únicos encontrados nos dados filtrados.
+         * O valor selecionado é armazenado em filtrosPorColuna.
+         */
+        function popularDropdownsFiltro(dados, ordemFinal) {
+            // Remove dropdowns antigos
+            document.querySelectorAll('.filter-dropdown').forEach(el => el.remove());
+            // Para cada coluna, cria dropdown de filtro
+            ordemFinal.forEach((col, idx) => {
+                const th = document.querySelector(`#cabecalhoTabelaDinamico th[data-col='${col}']`);
+                if (!th) return;
+                // Cria ícone de filtro
+                let icon = th.querySelector('.filter-icon');
+                if (!icon) {
+                    icon = document.createElement('span');
+                    icon.className = 'filter-icon';
+                    icon.innerHTML = '<svg width="16" height="16" fill="none" viewBox="0 0 20 20"><path d="M3 5h14M6 9h8M9 13h2" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>';
+                    th.appendChild(icon);
+                }
+                // Cria dropdown
+                const dropdown = document.createElement('div');
+                dropdown.className = 'filter-dropdown';
+                dropdown.setAttribute('data-dropdown-col', col);
+                // Valores únicos
+                const valoresUnicos = Array.from(new Set(dados.map(row => row[col] ?? '-'))).sort((a, b) => {
+                    if (typeof a === 'number' && typeof b === 'number') return a - b;
+                    return (''+a).localeCompare(''+b, 'pt-BR');
+                });
+                // Opção de limpar filtro
+                const clearBtn = document.createElement('button');
+                clearBtn.className = 'filter-dropdown-clear';
+                clearBtn.textContent = 'Limpar filtro';
+                clearBtn.onclick = function(e) {
+                    e.stopPropagation();
+                    filtrosPorColuna[col] = null;
+                    dropdown.classList.remove('active');
+                    renderTabela();
+                };
+                dropdown.appendChild(clearBtn);
+                // Opções de valor
+                valoresUnicos.forEach(valor => {
+                    const btn = document.createElement('button');
+                    btn.className = 'filter-dropdown-option' + (filtrosPorColuna[col] === valor ? ' selected' : '');
+                    btn.textContent = valor;
+                    btn.onclick = function(e) {
+                        e.stopPropagation();
+                        filtrosPorColuna[col] = valor;
+                        dropdown.classList.remove('active');
+                        renderTabela();
+                    };
+                    dropdown.appendChild(btn);
+                });
+                // Posiciona dropdown
+                th.style.position = 'relative';
+                th.appendChild(dropdown);
+                // Evento de abrir/fechar dropdown
+                icon.onclick = function(e) {
+                    e.stopPropagation();
+                    // Fecha outros dropdowns
+                    document.querySelectorAll('.filter-dropdown').forEach(dd => {
+                        if (dd !== dropdown) dd.classList.remove('active');
+                    });
+                    dropdown.classList.toggle('active');
+                };
+            });
+            // Fecha dropdowns ao clicar fora
+            document.addEventListener('click', function fecharDropdowns(e) {
+                document.querySelectorAll('.filter-dropdown').forEach(dd => dd.classList.remove('active'));
+            }, { once: true });
+        }
+
+        // ===================== Cabeçalhos Dinâmicos com Filtro =====================
+        /**
+         * Função para gerar cabeçalhos dinâmicos e ordenados, incluindo ícones de filtro e suporte ao filtro dinâmico por coluna.
+         * Após renderizar os cabeçalhos, chama popularDropdownsFiltro para adicionar os dropdowns.
+         */
         function gerarCabecalhosTabela(dados) {
             const thead = document.getElementById('cabecalhoTabelaDinamico');
             thead.innerHTML = '';
@@ -289,18 +440,103 @@
                 'count': 'Contagem',
                 'total': 'Total'
             };
-            // Renderizar cabeçalhos
+            // Renderizar cabeçalhos com data-col para filtro
             let tr = document.createElement('tr');
             tr.className = 'bg-peers-dark text-white';
             ordemFinal.forEach((k, idx) => {
                 let nome = nomesAmigaveis[k] || k.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
                 let th = document.createElement('th');
                 th.textContent = nome;
+                th.setAttribute('data-col', k);
                 th.className = 'px-4 py-3 font-semibold text-sm sm:text-base' + (idx === 0 ? ' rounded-tl-xl' : '') + (idx === ordemFinal.length - 1 ? ' rounded-tr-xl' : '');
                 tr.appendChild(th);
             });
             thead.appendChild(tr);
+            // Adiciona dropdowns de filtro dinâmico
+            popularDropdownsFiltro(dados, ordemFinal);
         }
+
+        /**
+         * Função que retorna os dados filtrados de acordo com os filtros de projeto, usuário, modelo e os filtros dinâmicos de coluna.
+         * Para cada coluna com filtro ativo em filtrosPorColuna, filtra apenas as linhas que possuem o valor selecionado.
+         */
+        function getFilteredData() {
+            const filterProjeto = document.getElementById('filter_projeto').value;
+            const filterUsuario = document.getElementById('filter_usuario').value;
+            const filterModelo = document.getElementById('filter_modelo').value;
+            return dadosConsulta.filter(row => {
+                const projMatch = (filterProjeto === 'todos') || (row.projeto === filterProjeto);
+                const userMatch = (filterUsuario === 'todos') || (row.usuario_executor === filterUsuario);
+                const modelMatch = (filterModelo === 'todos') || (row.model_name === filterModelo);
+                // Aplica filtros dinâmicos de coluna
+                const colFiltersMatch = Object.entries(filtrosPorColuna).every(([col, val]) => {
+                    if (val == null) return true;
+                    // Considera null, undefined e '-' como equivalentes
+                    let cell = row[col];
+                    if (cell === undefined || cell === null || cell === '') cell = '-';
+                    return cell == val;
+                });
+                return projMatch && userMatch && modelMatch && colFiltersMatch;
+            });
+        }
+
+        /**
+         * Função que renderiza o corpo da tabela de dados, aplicando os filtros dinâmicos de coluna e a paginação.
+         * Também chama gerarCabecalhosTabela para garantir que os dropdowns de filtro estejam sincronizados.
+         */
+        function renderTabela() {
+            const tbody = document.getElementById('tabelaDados');
+            const dadosFiltrados = getFilteredData();
+            totalRows = dadosFiltrados.length;
+            // Gera cabeçalho dinâmico (com filtros)
+            if (dadosFiltrados.length > 0) {
+                const primeiraLinha = dadosFiltrados[0];
+                let chaves = Object.keys(primeiraLinha);
+                const ordemPadrao = [
+                    'projeto',
+                    'usuario_executor',
+                    'model_name',
+                    'dia',
+                    'data',
+                    'job_id'
+                ];
+                const chavesPrincipais = ordemPadrao.filter(k => chaves.includes(k));
+                const chavesRestantes = chaves.filter(k => !ordemPadrao.includes(k));
+                const chavesMetricas = chavesRestantes.filter(k => typeof primeiraLinha[k] === 'number' || k.toLowerCase().includes('token') || k.toLowerCase().includes('valor') || k.toLowerCase().includes('count') || k.toLowerCase().includes('total'));
+                const chavesOutras = chavesRestantes.filter(k => !chavesMetricas.includes(k));
+                const ordemFinal = [...chavesPrincipais, ...chavesOutras, ...chavesMetricas];
+                gerarCabecalhosTabela(dadosFiltrados);
+                // Paginação
+                const startIdx = (currentPage - 1) * pageSize;
+                const endIdx = Math.min(startIdx + pageSize, totalRows);
+                const pageRows = dadosFiltrados.slice(startIdx, endIdx);
+                tbody.innerHTML = pageRows.map((row, idx) => {
+                    const bgClass = idx % 2 === 0 ? 'bg-gray-50' : 'bg-white';
+                    const tds = ordemFinal.map(k => {
+                        let valor = row[k];
+                        if (valor === undefined || valor === null || valor === '') {
+                            return '<td class="px-4 py-3 border-b border-gray-200 transition-all duration-300"><span class="text-gray-400 italic">-</span></td>';
+                        }
+                        if ((k === 'dia' || k === 'data') && typeof valor === 'string' && valor.includes('T')) {
+                            valor = valor.split('T')[0];
+                        }
+                        if (typeof valor === 'number') {
+                            valor = `<span class="text-peers-blue font-semibold">${valor.toLocaleString('pt-BR', {maximumFractionDigits: 1})}</span>`;
+                        }
+                        return `<td class="px-4 py-3 border-b border-gray-200 transition-all duration-300">${valor}</td>`;
+                    }).join('');
+                    return `<tr class="${bgClass} hover:bg-peers-serene-02 transition-all duration-300">${tds}</tr>`;
+                }).join('');
+                document.getElementById('paginationInfo').textContent = `Mostrando ${startIdx + 1} a ${endIdx} de ${totalRows} registros`;
+                document.getElementById('prevPageBtn').disabled = currentPage === 1;
+                document.getElementById('nextPageBtn').disabled = endIdx >= totalRows;
+            } else {
+                gerarCabecalhosTabela([]);
+                tbody.innerHTML = '<tr><td colspan="5" class="text-center py-4">A consulta não retornou dados (ou o filtro está muito restrito).</td></tr>';
+                document.getElementById('paginationInfo').textContent = '';
+            }
+        }
+        // ===================== Fim dos Filtros Dinâmicos de Coluna =====================
 
         function initDashboard() {
             document.getElementById('dias').value = '30';
@@ -399,76 +635,6 @@
                     document.getElementById('tabelaDados').innerHTML = `<tr><td colspan="5" class="text-center py-4 text-red-600">Erro ao buscar dados da API. Verifique o console (F12) para detalhes.</td></tr>`;
                     gerarCabecalhosTabela([]);
                 });
-        }
-
-        function getFilteredData() {
-            const filterProjeto = document.getElementById('filter_projeto').value;
-            const filterUsuario = document.getElementById('filter_usuario').value;
-            const filterModelo = document.getElementById('filter_modelo').value;
-            return dadosConsulta.filter(row => {
-                const projMatch = (filterProjeto === 'todos') || (row.projeto === filterProjeto);
-                const userMatch = (filterUsuario === 'todos') || (row.usuario_executor === filterUsuario);
-                const modelMatch = (filterModelo === 'todos') || (row.model_name === filterModelo);
-                return projMatch && userMatch && modelMatch;
-            });
-        }
-
-        function renderTabela() {
-            const tbody = document.getElementById('tabelaDados');
-            const dadosFiltrados = getFilteredData();
-            totalRows = dadosFiltrados.length;
-            // Gera cabeçalho dinâmico
-            gerarCabecalhosTabela(dadosFiltrados);
-            if (!dadosFiltrados.length) {
-                tbody.innerHTML = '<tr><td colspan="5" class="text-center py-4">A consulta não retornou dados (ou o filtro está muito restrito).</td></tr>';
-                document.getElementById('paginationInfo').textContent = '';
-                return;
-            }
-            // Descobre ordem das colunas
-            const primeiraLinha = dadosFiltrados[0];
-            let chaves = Object.keys(primeiraLinha);
-            const ordemPadrao = [
-                'projeto',
-                'usuario_executor',
-                'model_name',
-                'dia',
-                'data',
-                'job_id'
-            ];
-            const chavesPrincipais = ordemPadrao.filter(k => chaves.includes(k));
-            const chavesRestantes = chaves.filter(k => !ordemPadrao.includes(k));
-            const chavesMetricas = chavesRestantes.filter(k => typeof primeiraLinha[k] === 'number' || k.toLowerCase().includes('token') || k.toLowerCase().includes('valor') || k.toLowerCase().includes('count') || k.toLowerCase().includes('total'));
-            const chavesOutras = chavesRestantes.filter(k => !chavesMetricas.includes(k));
-            const ordemFinal = [...chavesPrincipais, ...chavesOutras, ...chavesMetricas];
-            // Paginação
-            const startIdx = (currentPage - 1) * pageSize;
-            const endIdx = Math.min(startIdx + pageSize, totalRows);
-            const pageRows = dadosFiltrados.slice(startIdx, endIdx);
-            tbody.innerHTML = pageRows.map((row, idx) => {
-                // Alterna cor de fundo
-                const bgClass = idx % 2 === 0 ? 'bg-gray-50' : 'bg-white';
-                const tds = ordemFinal.map(k => {
-                    let valor = row[k];
-                    if (valor === undefined || valor === null || valor === '') {
-                        return '<td class="px-4 py-3 border-b border-gray-200 transition-all duration-300"><span class="text-gray-400 italic">-</span></td>';
-                    }
-                    // Formatação especial para datas
-                    if ((k === 'dia' || k === 'data') && typeof valor === 'string' && valor.includes('T')) {
-                        valor = valor.split('T')[0];
-                    }
-                    // Formatação especial para valores numéricos
-                    if (typeof valor === 'number') {
-                        valor = `<span class="text-peers-blue font-semibold">${valor.toLocaleString('pt-BR', {maximumFractionDigits: 1})}</span>`;
-                    }
-                    return `<td class="px-4 py-3 border-b border-gray-200 transition-all duration-300">${valor}</td>`;
-                }).join('');
-                return `<tr class="${bgClass} hover:bg-peers-serene-02 transition-all duration-300">${tds}</tr>`;
-            }).join('');
-            // Paginação info
-            document.getElementById('paginationInfo').textContent = `Mostrando ${startIdx + 1} a ${endIdx} de ${totalRows} registros`;
-            // Botões
-            document.getElementById('prevPageBtn').disabled = currentPage === 1;
-            document.getElementById('nextPageBtn').disabled = endIdx >= totalRows;
         }
 
         function renderGraficos() {
