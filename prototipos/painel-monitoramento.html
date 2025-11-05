@@ -210,8 +210,15 @@
             <h3 class="text-lg font-bold text-peers-blue mb-4">Prévia dos Dados Filtrados</h3>
             <div class="overflow-x-auto rounded-xl shadow-inner">
                 <table class="min-w-full text-xs sm:text-sm text-left border-separate border-spacing-0 rounded-xl shadow-lg transition-all duration-300">
-                    <thead id="cabecalhoTabelaDinamico" class="bg-peers-blue text-white rounded-t-xl">
-                        <!-- Cabeçalhos dinâmicos serão inseridos aqui -->
+                    <!-- Cabeçalho da tabela com fundo escuro (PEERS Blue) e texto branco para destaque -->
+                    <thead class="bg-peers-blue text-white rounded-t-xl">
+                        <tr>
+                            <th class="px-4 py-3 font-semibold text-sm sm:text-base rounded-tl-xl">Projeto</th>
+                            <th class="px-4 py-3 font-semibold text-sm sm:text-base">Usuário Executor</th>
+                            <th class="px-4 py-3 font-semibold text-sm sm:text-base">Modelo</th>
+                            <th class="px-4 py-3 font-semibold text-sm sm:text-base">Data</th>
+                            <th id="thValor" class="px-4 py-3 font-semibold text-sm sm:text-base rounded-tr-xl">Valor da Métrica</th>
+                        </tr>
                     </thead>
                     <tbody id="tabelaDados"></tbody>
                 </table>
@@ -240,60 +247,6 @@
         const pageSize = 20;
         let totalRows = 0;
 
-        // Função para gerar cabeçalhos dinâmicos e ordenados
-        function gerarCabecalhosTabela(dados) {
-            const thead = document.getElementById('cabecalhoTabelaDinamico');
-            thead.innerHTML = '';
-            if (!dados || dados.length === 0) {
-                // Cabeçalho padrão
-                thead.innerHTML = `<tr><th class="px-4 py-3 font-semibold text-sm sm:text-base rounded-tl-xl">Projeto</th><th class="px-4 py-3 font-semibold text-sm sm:text-base">Usuário Executor</th><th class="px-4 py-3 font-semibold text-sm sm:text-base">Modelo</th><th class="px-4 py-3 font-semibold text-sm sm:text-base">Data</th><th class="px-4 py-3 font-semibold text-sm sm:text-base rounded-tr-xl">Valor da Métrica</th></tr>`;
-                return;
-            }
-            const primeiraLinha = dados[0];
-            let chaves = Object.keys(primeiraLinha);
-            // Ordem lógica: identificadores principais, data, depois métricas
-            const ordemPadrao = [
-                'projeto',
-                'usuario_executor',
-                'model_name',
-                'dia',
-                'data',
-                'job_id'
-            ];
-            // Separar chaves
-            const chavesPrincipais = ordemPadrao.filter(k => chaves.includes(k));
-            const chavesRestantes = chaves.filter(k => !ordemPadrao.includes(k));
-            // Colunas de métricas numéricas por último
-            const chavesMetricas = chavesRestantes.filter(k => typeof primeiraLinha[k] === 'number' || k.toLowerCase().includes('token') || k.toLowerCase().includes('valor') || k.toLowerCase().includes('count') || k.toLowerCase().includes('total'));
-            const chavesOutras = chavesRestantes.filter(k => !chavesMetricas.includes(k));
-            // Montar ordem final
-            const ordemFinal = [...chavesPrincipais, ...chavesOutras, ...chavesMetricas];
-            // Mapear nomes amigáveis
-            const nomesAmigaveis = {
-                'projeto': 'Projeto',
-                'usuario_executor': 'Usuário Executor',
-                'model_name': 'Modelo',
-                'dia': 'Data',
-                'data': 'Data',
-                'job_id': 'Job ID',
-                'tokens_entrada': 'Tokens de Entrada',
-                'tokens_saida': 'Tokens de Saída',
-                'valor': 'Valor',
-                'count': 'Contagem',
-                'total': 'Total'
-            };
-            // Renderizar cabeçalhos
-            let tr = document.createElement('tr');
-            ordemFinal.forEach((k, idx) => {
-                let nome = nomesAmigaveis[k] || k.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
-                let th = document.createElement('th');
-                th.textContent = nome;
-                th.className = 'px-4 py-3 font-semibold text-sm sm:text-base' + (idx === 0 ? ' rounded-tl-xl' : '') + (idx === ordemFinal.length - 1 ? ' rounded-tr-xl' : '');
-                tr.appendChild(th);
-            });
-            thead.appendChild(tr);
-        }
-
         function initDashboard() {
             document.getElementById('dias').value = '30';
             document.getElementById('coluna_alvo').value = 'tokens_entrada';
@@ -321,7 +274,7 @@
             const pizzaValSelect = document.getElementById('pizza_valor');
             eixoYSelect.innerHTML = `<option value="${chaveMetrica}" selected>${nomeExibicao}</option>`;
             pizzaValSelect.innerHTML = `<option value="${chaveMetrica}" selected>${nomeExibicao}</option>`;
-            // thValor removido, pois cabeçalho agora é dinâmico
+            document.getElementById('thValor').textContent = nomeExibicao;
         }
 
         function popularFiltros() {
@@ -359,7 +312,6 @@
             const url = new URL(APP_SERVICE_URL + '/get_token_stats');
             Object.entries(params).forEach(([k, v]) => url.searchParams.append(k, v));
             document.getElementById('tabelaDados').innerHTML = '<tr><td colspan="5" class="text-center py-4">Carregando...</td></tr>';
-            gerarCabecalhosTabela([]); // Limpa cabeçalho enquanto carrega
             fetch(url)
                 .then(resp => {
                     if (!resp.ok) {
@@ -377,11 +329,9 @@
                         const chaveMetrica = encontrarChaveMetrica(dadosConsulta);
                         atualizarComponentesUI(chaveMetrica);
                         popularFiltros();
-                        gerarCabecalhosTabela(dadosConsulta);
                     } else {
                         atualizarComponentesUI('Valor');
                         popularFiltros();
-                        gerarCabecalhosTabela([]);
                     }
                     renderTabela();
                     renderGraficos();
@@ -389,7 +339,6 @@
                 .catch((err) => {
                     console.error("Falha no fetch:", err);
                     document.getElementById('tabelaDados').innerHTML = `<tr><td colspan="5" class="text-center py-4 text-red-600">Erro ao buscar dados da API. Verifique o console (F12) para detalhes.</td></tr>`;
-                    gerarCabecalhosTabela([]);
                 });
         }
 
@@ -409,52 +358,32 @@
             const tbody = document.getElementById('tabelaDados');
             const dadosFiltrados = getFilteredData();
             totalRows = dadosFiltrados.length;
-            // Gera cabeçalho dinâmico
-            gerarCabecalhosTabela(dadosFiltrados);
-            if (!dadosFiltrados.length) {
+            const startIdx = (currentPage - 1) * pageSize;
+            const endIdx = Math.min(startIdx + pageSize, totalRows);
+            const pageRows = dadosFiltrados.slice(startIdx, endIdx);
+            if (!pageRows.length) {
                 tbody.innerHTML = '<tr><td colspan="5" class="text-center py-4">A consulta não retornou dados (ou o filtro está muito restrito).</td></tr>';
                 document.getElementById('paginationInfo').textContent = '';
                 return;
             }
-            // Descobre ordem das colunas
-            const primeiraLinha = dadosFiltrados[0];
-            let chaves = Object.keys(primeiraLinha);
-            const ordemPadrao = [
-                'projeto',
-                'usuario_executor',
-                'model_name',
-                'dia',
-                'data',
-                'job_id'
-            ];
-            const chavesPrincipais = ordemPadrao.filter(k => chaves.includes(k));
-            const chavesRestantes = chaves.filter(k => !ordemPadrao.includes(k));
-            const chavesMetricas = chavesRestantes.filter(k => typeof primeiraLinha[k] === 'number' || k.toLowerCase().includes('token') || k.toLowerCase().includes('valor') || k.toLowerCase().includes('count') || k.toLowerCase().includes('total'));
-            const chavesOutras = chavesRestantes.filter(k => !chavesMetricas.includes(k));
-            const ordemFinal = [...chavesPrincipais, ...chavesOutras, ...chavesMetricas];
-            // Paginação
-            const startIdx = (currentPage - 1) * pageSize;
-            const endIdx = Math.min(startIdx + pageSize, totalRows);
-            const pageRows = dadosFiltrados.slice(startIdx, endIdx);
             tbody.innerHTML = pageRows.map((row, idx) => {
+                const valor = row[chaveMetricaAtual];
+                const projeto = row.projeto || '<span class="text-gray-400 italic">N/A</span>';
+                const usuario = row.usuario_executor || '<span class="text-gray-400 italic">N/A</span>';
+                const modelo = row.model_name || '<span class="text-gray-400 italic">N/A</span>';
+                const data = row.dia ? row.dia.split('T')[0] : '<span class="text-gray-400 italic">N/A</span>';
+                const valorFormatado = (valor !== undefined && valor !== null && valor !== '') ? `<span class="text-peers-blue font-semibold">${valor.toLocaleString('pt-BR', {maximumFractionDigits: 1})}</span>` : '<span class="text-gray-400 italic">-</span>';
                 // Alterna cor de fundo
                 const bgClass = idx % 2 === 0 ? 'bg-gray-50' : 'bg-white';
-                const tds = ordemFinal.map(k => {
-                    let valor = row[k];
-                    if (valor === undefined || valor === null || valor === '') {
-                        return '<td class="px-4 py-3 border-b border-gray-200 transition-all duration-300"><span class="text-gray-400 italic">-</span></td>';
-                    }
-                    // Formatação especial para datas
-                    if ((k === 'dia' || k === 'data') && typeof valor === 'string' && valor.includes('T')) {
-                        valor = valor.split('T')[0];
-                    }
-                    // Formatação especial para valores numéricos
-                    if (typeof valor === 'number') {
-                        valor = `<span class="text-peers-blue font-semibold">${valor.toLocaleString('pt-BR', {maximumFractionDigits: 1})}</span>`;
-                    }
-                    return `<td class="px-4 py-3 border-b border-gray-200 transition-all duration-300">${valor}</td>`;
-                }).join('');
-                return `<tr class="${bgClass} hover:bg-peers-serene-02 transition-all duration-300">${tds}</tr>`;
+                return `
+                <tr class="${bgClass} hover:bg-peers-serene-02 transition-all duration-300">
+                    <td class="px-4 py-3 border-b border-gray-200 transition-all duration-300">${projeto}</td>
+                    <td class="px-4 py-3 border-b border-gray-200 transition-all duration-300">${usuario}</td>
+                    <td class="px-4 py-3 border-b border-gray-200 transition-all duration-300">${modelo}</td>
+                    <td class="px-4 py-3 border-b border-gray-200 transition-all duration-300">${data}</td>
+                    <td class="px-4 py-3 border-b border-gray-200 transition-all duration-300">${valorFormatado}</td>
+                </tr>
+                `;
             }).join('');
             // Paginação info
             document.getElementById('paginationInfo').textContent = `Mostrando ${startIdx + 1} a ${endIdx} de ${totalRows} registros`;
