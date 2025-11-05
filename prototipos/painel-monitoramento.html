@@ -66,9 +66,21 @@
             background: linear-gradient(135deg, var(--peers-blue) 0%, #023059 100%);
             color: white;
         }
+
         /* ====== Filtros Dinâmicos de Coluna ====== */
         .filter-icon {
             display: inline-block;
+
+    
+        
+          
+    
+
+        
+        Expand All
+    
+    @@ -77,7 +76,7 @@
+  
             vertical-align: middle;
             margin-left: 0.25rem;
             cursor: pointer;
@@ -76,10 +88,27 @@
             transition: color 0.2s;
             font-size: 1rem;
         }
-        .filter-icon.filter-active {
+        .filter-icon:hover {
             color: #F3FF99;
         }
         .filter-dropdown {
+
+    
+          
+            
+    
+
+          
+          Expand Down
+          
+            
+    
+
+          
+          Expand Up
+    
+    @@ -316,13 +315,6 @@ <h3 class="text-lg font-bold text-peers-blue mb-4">Prévia dos Dados Filtrados</
+  
             position: absolute;
             z-index: 50;
             min-width: 160px;
@@ -212,7 +241,6 @@
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
                 <div class="bg-white rounded-2xl shadow-lg p-4 sm:p-6">
                     <h3 class="text-lg font-bold text-peers-blue mb-2">Gráfico de Barras</h3>
-
                     <div class="flex flex-wrap gap-x-4 gap-y-2 mb-4">
                         <div>
                             <label class="block text-xs font-medium text-gray-700 mb-1">Eixo X</label>
@@ -303,7 +331,6 @@
     <footer class="main-footer text-center py-4 text-peers-blue bg-peers-gray">
         <p>&copy; 2025 PEERS Consulting + Technology</p>
     </footer>
-
     <script>
         const APP_SERVICE_URL = "https://poc-agent-revisor-monitoramento-g2grdzdtcragbfhk.centralus-01.azurewebsites.net";
         let dadosConsulta = [];
@@ -315,19 +342,45 @@
         const pageSize = 20;
         let totalRows = 0;
 
+        // ===== FILTROS DINÂMICOS DE COLUNA =====
+        // O objeto filtrosPorColuna armazena o valor selecionado para cada coluna.
+        // Quando um valor é selecionado, getFilteredData() filtra os dados e renderTabela() atualiza a UI.
+        // A função popularDropdownsFiltro() cria os dropdowns dinamicamente para cada coluna, usando os valores únicos presentes nos dados filtrados.
+        // A função getFilteredData() aplica os filtros de coluna, normalizando valores vazios para '-'.
+        // A função renderTabela() sincroniza os dropdowns com os dados filtrados e garante que os gráficos e paginação estejam corretos.
+
         // ===================== Filtros Dinâmicos de Coluna =====================
         // Objeto que armazena o valor selecionado para cada coluna (chave: nome da coluna, valor: valor filtrado ou null)
         const filtrosPorColuna = {};
 
+    
+        
+          
+    
+
+        
+        Expand All
+    
+    @@ -331,6 +323,8 @@ <h3 class="text-lg font-bold text-peers-blue mb-4">Prévia dos Dados Filtrados</
+  
         /**
          * Função para popular os dropdowns de filtro dinâmico em cada cabeçalho de coluna da tabela.
          * Para cada coluna, cria um dropdown com os valores únicos encontrados nos dados filtrados.
          * O valor selecionado é armazenado em filtrosPorColuna.
-         * Sempre recria os dropdowns ao renderizar a tabela para garantir sincronização.
-         * Adiciona indicador visual (classe filter-active) ao ícone de filtro se houver filtro ativo.
          */
         function popularDropdownsFiltro(dados, ordemFinal) {
             // Remove dropdowns antigos
+
+    
+        
+          
+    
+
+        
+        Expand All
+    
+    @@ -347,20 +341,21 @@ <h3 class="text-lg font-bold text-peers-blue mb-4">Prévia dos Dados Filtrados</
+  
             document.querySelectorAll('.filter-dropdown').forEach(el => el.remove());
             // Para cada coluna, cria dropdown de filtro
             ordemFinal.forEach((col, idx) => {
@@ -341,24 +394,34 @@
                     icon.innerHTML = '<svg width="16" height="16" fill="none" viewBox="0 0 20 20"><path d="M3 5h14M6 9h8M9 13h2" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>';
                     th.appendChild(icon);
                 }
-                // Aplica indicador visual se filtro ativo
+                // Indicador visual de filtro ativo
                 if (filtrosPorColuna[col] != null) {
-                    icon.classList.add('filter-active');
+                    icon.style.color = '#F3FF99';
+                    icon.innerHTML = '<svg width="16" height="16" fill="none" viewBox="0 0 20 20"><path d="M3 5h14M6 9h8M9 13h2" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><circle cx="12" cy="4" r="2" fill="#E1FF00"/></svg>';
                 } else {
-                    icon.classList.remove('filter-active');
+                    icon.style.color = '#E1FF00';
+                    icon.innerHTML = '<svg width="16" height="16" fill="none" viewBox="0 0 20 20"><path d="M3 5h14M6 9h8M9 13h2" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>';
                 }
                 // Cria dropdown
                 const dropdown = document.createElement('div');
                 dropdown.className = 'filter-dropdown';
                 dropdown.setAttribute('data-dropdown-col', col);
                 // Valores únicos
-                const valoresUnicos = Array.from(new Set(dados.map(row => {
-                    let v = row[col];
-                    return (v === undefined || v === null || v === '') ? '-' : v;
-                }))).sort((a, b) => {
+                const valoresUnicos = Array.from(new Set(dados.map(row => row[col] ?? '-'))).sort((a, b) => {
                     if (typeof a === 'number' && typeof b === 'number') return a - b;
                     return (''+a).localeCompare(''+b, 'pt-BR');
                 });
+
+    
+        
+          
+    
+
+        
+        Expand All
+    
+    @@ -372,8 +367,8 @@ <h3 class="text-lg font-bold text-peers-blue mb-4">Prévia dos Dados Filtrados</
+  
                 // Opção de limpar filtro
                 const clearBtn = document.createElement('button');
                 clearBtn.className = 'filter-dropdown-clear';
@@ -367,11 +430,22 @@
                     e.stopPropagation();
                     filtrosPorColuna[col] = null;
                     dropdown.classList.remove('active');
-                    currentPage = 1; // Reset paginação ao limpar filtro
                     renderTabela();
+                    renderGraficos();
                 };
                 dropdown.appendChild(clearBtn);
                 // Opções de valor
+
+    
+        
+          
+    
+
+        
+        Expand All
+    
+    @@ -385,8 +380,8 @@ <h3 class="text-lg font-bold text-peers-blue mb-4">Prévia dos Dados Filtrados</
+  
                 valoresUnicos.forEach(valor => {
                     const btn = document.createElement('button');
                     btn.className = 'filter-dropdown-option' + (filtrosPorColuna[col] === valor ? ' selected' : '');
@@ -380,11 +454,22 @@
                         e.stopPropagation();
                         filtrosPorColuna[col] = valor;
                         dropdown.classList.remove('active');
-                        currentPage = 1; // Reset paginação ao aplicar filtro
                         renderTabela();
+                        renderGraficos();
                     };
                     dropdown.appendChild(btn);
                 });
+
+    
+        
+          
+    
+
+        
+        Expand All
+    
+    @@ -403,15 +398,16 @@ <h3 class="text-lg font-bold text-peers-blue mb-4">Prévia dos Dados Filtrados</
+  
                 // Posiciona dropdown
                 th.style.position = 'relative';
                 th.appendChild(dropdown);
@@ -398,19 +483,35 @@
                     dropdown.classList.toggle('active');
                 };
             });
+            // Fecha dropdowns ao clicar fora
+            document.addEventListener('click', function fecharDropdowns(e) {
+                if (!e.target.closest('.filter-dropdown') && !e.target.closest('.filter-icon')) {
+                    document.querySelectorAll('.filter-dropdown').forEach(dd => dd.classList.remove('active'));
+                }
+            });
         }
 
-        // Evento global para fechar dropdowns ao clicar fora
-        document.addEventListener('click', function(e) {
-            // Se o clique não foi dentro de um dropdown ou no ícone de filtro, fecha todos
-            if (!e.target.closest('.filter-dropdown') && !e.target.closest('.filter-icon')) {
-                document.querySelectorAll('.filter-dropdown').forEach(dd => dd.classList.remove('active'));
-            }
-        });
-
+        // ===================== Cabeçalhos Dinâmicos com Filtro =====================
         /**
          * Função para gerar cabeçalhos dinâmicos e ordenados, incluindo ícones de filtro e suporte ao filtro dinâmico por coluna.
          * Após renderizar os cabeçalhos, chama popularDropdownsFiltro para adicionar os dropdowns.
+
+    
+          
+            
+    
+
+          
+          Expand Down
+          
+            
+    
+
+          
+          Expand Up
+    
+    @@ -478,6 +474,7 @@ <h3 class="text-lg font-bold text-peers-blue mb-4">Prévia dos Dados Filtrados</
+  
          */
         function gerarCabecalhosTabela(dados) {
             const thead = document.getElementById('cabecalhoTabelaDinamico');
@@ -470,14 +571,23 @@
             // Adiciona dropdowns de filtro dinâmico
             popularDropdownsFiltro(dados, ordemFinal);
         }
-
         /**
          * Função que retorna os dados filtrados de acordo com os filtros de projeto, usuário, modelo e os filtros dinâmicos de coluna.
          * Para cada coluna com filtro ativo em filtrosPorColuna, filtra apenas as linhas que possuem o valor selecionado.
-         * Trata valores null, undefined e string vazia como '-'.
          */
         function getFilteredData() {
             const filterProjeto = document.getElementById('filter_projeto').value;
+
+    
+        
+          
+    
+
+        
+        Expand All
+    
+    @@ -490,7 +487,6 @@ <h3 class="text-lg font-bold text-peers-blue mb-4">Prévia dos Dados Filtrados</
+  
             const filterUsuario = document.getElementById('filter_usuario').value;
             const filterModelo = document.getElementById('filter_modelo').value;
             return dadosConsulta.filter(row => {
@@ -487,26 +597,51 @@
                 // Aplica filtros dinâmicos de coluna
                 const colFiltersMatch = Object.entries(filtrosPorColuna).every(([col, val]) => {
                     if (val == null) return true;
+                    // Normaliza valores vazios para '-' antes da comparação
                     let cell = row[col];
                     if (cell === undefined || cell === null || cell === '') cell = '-';
                     return cell == val;
+
+    
+        
+          
+    
+
+        
+        Expand All
+    
+    @@ -502,15 +498,12 @@ <h3 class="text-lg font-bold text-peers-blue mb-4">Prévia dos Dados Filtrados</
+  
                 });
                 return projMatch && userMatch && modelMatch && colFiltersMatch;
             });
         }
-
         /**
          * Função que renderiza o corpo da tabela de dados, aplicando os filtros dinâmicos de coluna e a paginação.
          * Também chama gerarCabecalhosTabela para garantir que os dropdowns de filtro estejam sincronizados.
-         * Sempre reseta a paginação ao aplicar/remover filtros dinâmicos de coluna.
          */
         function renderTabela() {
             const tbody = document.getElementById('tabelaDados');
             const dadosFiltrados = getFilteredData();
             totalRows = dadosFiltrados.length;
+            // Resetar paginação se necessário
+            if (currentPage > Math.ceil(totalRows / pageSize)) {
+                currentPage = 1;
+            }
             // Gera cabeçalho dinâmico (com filtros)
             if (dadosFiltrados.length > 0) {
                 const primeiraLinha = dadosFiltrados[0];
+
+    
+        
+          
+    
+
+        
+        Expand All
+    
+    @@ -530,6 +523,9 @@ <h3 class="text-lg font-bold text-peers-blue mb-4">Prévia dos Dados Filtrados</
+  
                 let chaves = Object.keys(primeiraLinha);
                 const ordemPadrao = [
                     'projeto',
@@ -523,12 +658,26 @@
                 const ordemFinal = [...chavesPrincipais, ...chavesOutras, ...chavesMetricas];
                 gerarCabecalhosTabela(dadosFiltrados);
                 // Paginação
-                // Se currentPage for maior que o total de páginas, reseta para 1
-                const maxPage = Math.max(1, Math.ceil(totalRows / pageSize));
-                if (currentPage > maxPage) currentPage = 1;
                 const startIdx = (currentPage - 1) * pageSize;
                 const endIdx = Math.min(startIdx + pageSize, totalRows);
                 const pageRows = dadosFiltrados.slice(startIdx, endIdx);
+
+    
+          
+            
+    
+
+          
+          Expand Down
+          
+            
+    
+
+          
+          Expand Up
+    
+    @@ -660,216 +656,11 @@ <h3 class="text-lg font-bold text-peers-blue mb-4">Prévia dos Dados Filtrados</
+  
                 tbody.innerHTML = pageRows.map((row, idx) => {
                     const bgClass = idx % 2 === 0 ? 'bg-gray-50' : 'bg-white';
                     const tds = ordemFinal.map(k => {
@@ -556,7 +705,6 @@
             }
         }
         // ===================== Fim dos Filtros Dinâmicos de Coluna =====================
-
         function initDashboard() {
             document.getElementById('dias').value = '30';
             document.getElementById('coluna_alvo').value = 'tokens_entrada';
@@ -568,7 +716,6 @@
             document.getElementById('pizza_categoria').value = 'projeto';
             buscarDados();
         }
-
         function encontrarChaveMetrica(dados) {
             if (!dados || dados.length === 0) return 'Valor';
             const firstRow = dados[0];
@@ -576,7 +723,6 @@
             const chaveMetrica = Object.keys(firstRow).find(key => !chavesConhecidas.includes(key));
             return chaveMetrica || 'Valor';
         }
-
         function atualizarComponentesUI(chaveMetrica) {
             chaveMetricaAtual = chaveMetrica;
             const nomeExibicao = chaveMetrica.replace(/_/g, ' ');
@@ -586,7 +732,6 @@
             pizzaValSelect.innerHTML = `<option value="${chaveMetrica}" selected>${nomeExibicao}</option>`;
             // thValor removido, pois cabeçalho agora é dinâmico
         }
-
         function popularFiltros() {
             const projetos = new Set();
             const usuarios = new Set();
@@ -609,7 +754,6 @@
             createOptions(usuarios, 'filter_usuario');
             createOptions(modelos, 'filter_modelo');
         }
-
         function buscarDados() {
             const params = {
                 dias: document.getElementById('dias').value,
@@ -655,6 +799,7 @@
                     gerarCabecalhosTabela([]);
                 });
         }
+
         function getFilteredData() {
             const filterProjeto = document.getElementById('filter_projeto').value;
             const filterUsuario = document.getElementById('filter_usuario').value;
@@ -866,14 +1011,19 @@
                 }
             });
         }
-        function renderGraficos() {
-            // NÃO ALTERAR: gráficos não dependem dos filtros dinâmicos de coluna
-            const dadosFiltrados = getFilteredData();
-            // ... lógica dos gráficos permanece igual ...
-            // (código omitido para foco na tabela)
-        }
 
         document.addEventListener('DOMContentLoaded', () => {
+
+    
+          
+            
+    
+
+          
+          Expand Down
+    
+    
+  
             initDashboard();
             document.getElementById('filtrosForm').addEventListener('submit', function(e) {
                 e.preventDefault();
