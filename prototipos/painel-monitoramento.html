@@ -250,8 +250,10 @@
             const thead = document.getElementById('cabecalhoTabelaDinamico');
             thead.innerHTML = '';
             if (!dados || dados.length === 0) {
-                // Cabeçalho padrão
-                thead.innerHTML = `<tr><th class="px-4 py-3 font-semibold text-sm sm:text-base rounded-tl-xl">Projeto</th><th class="px-4 py-3 font-semibold text-sm sm:text-base">Usuário Executor</th><th class="px-4 py-3 font-semibold text-sm sm:text-base">Modelo</th><th class="px-4 py-3 font-semibold text-sm sm:text-base">Data</th><th class="px-4 py-3 font-semibold text-sm sm:text-base rounded-tr-xl">Valor da Métrica</th></tr>`;
+                let tr = document.createElement('tr');
+                tr.className = 'bg-peers-dark text-white';
+                tr.innerHTML = `<th class="px-4 py-3 font-semibold text-sm sm:text-base rounded-tl-xl">Projeto</th><th class="px-4 py-3 font-semibold text-sm sm:text-base">Usuário Executor</th><th class="px-4 py-3 font-semibold text-sm sm:text-base">Modelo</th><th class="px-4 py-3 font-semibold text-sm sm:text-base">Data</th><th class="px-4 py-3 font-semibold text-sm sm:text-base rounded-tr-xl">Valor da Métrica</th>`;
+                thead.appendChild(tr);
                 return;
             }
             const primeiraLinha = dados[0];
