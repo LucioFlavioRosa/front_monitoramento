@@ -655,7 +655,217 @@
                     gerarCabecalhosTabela([]);
                 });
         }
+        function getFilteredData() {
+            const filterProjeto = document.getElementById('filter_projeto').value;
+            const filterUsuario = document.getElementById('filter_usuario').value;
+            const filterModelo = document.getElementById('filter_modelo').value;
+            return dadosConsulta.filter(row => {
+                const projMatch = (filterProjeto === 'todos') || (row.projeto === filterProjeto);
+                const userMatch = (filterUsuario === 'todos') || (row.usuario_executor === filterUsuario);
+                const modelMatch = (filterModelo === 'todos') || (row.model_name === filterModelo);
+                return projMatch && userMatch && modelMatch;
+            });
+        }
 
+        function renderTabela() {
+            const tbody = document.getElementById('tabelaDados');
+            const dadosFiltrados = getFilteredData();
+            totalRows = dadosFiltrados.length;
+            // Gera cabeçalho dinâmico
+            gerarCabecalhosTabela(dadosFiltrados);
+            if (!dadosFiltrados.length) {
+                tbody.innerHTML = '<tr><td colspan="5" class="text-center py-4">A consulta não retornou dados (ou o filtro está muito restrito).</td></tr>';
+                document.getElementById('paginationInfo').textContent = '';
+                return;
+            }
+            // Descobre ordem das colunas
+            const primeiraLinha = dadosFiltrados[0];
+            let chaves = Object.keys(primeiraLinha);
+            const ordemPadrao = [
+                'projeto',
+                'usuario_executor',
+                'model_name',
+                'dia',
+                'data',
+                'job_id'
+            ];
+            const chavesPrincipais = ordemPadrao.filter(k => chaves.includes(k));
+            const chavesRestantes = chaves.filter(k => !ordemPadrao.includes(k));
+            const chavesMetricas = chavesRestantes.filter(k => typeof primeiraLinha[k] === 'number' || k.toLowerCase().includes('token') || k.toLowerCase().includes('valor') || k.toLowerCase().includes('count') || k.toLowerCase().includes('total'));
+            const chavesOutras = chavesRestantes.filter(k => !chavesMetricas.includes(k));
+            const ordemFinal = [...chavesPrincipais, ...chavesOutras, ...chavesMetricas];
+            // Paginação
+            const startIdx = (currentPage - 1) * pageSize;
+            const endIdx = Math.min(startIdx + pageSize, totalRows);
+            const pageRows = dadosFiltrados.slice(startIdx, endIdx);
+            tbody.innerHTML = pageRows.map((row, idx) => {
+                // Alterna cor de fundo
+                const bgClass = idx % 2 === 0 ? 'bg-gray-50' : 'bg-white';
+                const tds = ordemFinal.map(k => {
+                    let valor = row[k];
+                    if (valor === undefined || valor === null || valor === '') {
+                        return '<td class="px-4 py-3 border-b border-gray-200 transition-all duration-300"><span class="text-gray-400 italic">-</span></td>';
+                    }
+                    // Formatação especial para datas
+                    if ((k === 'dia' || k === 'data') && typeof valor === 'string' && valor.includes('T')) {
+                        valor = valor.split('T')[0];
+                    }
+                    // Formatação especial para valores numéricos
+                    if (typeof valor === 'number') {
+                        valor = `<span class="text-peers-blue font-semibold">${valor.toLocaleString('pt-BR', {maximumFractionDigits: 1})}</span>`;
+                    }
+                    return `<td class="px-4 py-3 border-b border-gray-200 transition-all duration-300">${valor}</td>`;
+                }).join('');
+                return `<tr class="${bgClass} hover:bg-peers-serene-02 transition-all duration-300">${tds}</tr>`;
+            }).join('');
+            // Paginação info
+            document.getElementById('paginationInfo').textContent = `Mostrando ${startIdx + 1} a ${endIdx} de ${totalRows} registros`;
+            // Botões
+            document.getElementById('prevPageBtn').disabled = currentPage === 1;
+            document.getElementById('nextPageBtn').disabled = endIdx >= totalRows;
+        }
+
+        function renderGraficos() {
+            const dadosFiltrados = getFilteredData();
+
+            // === 1. Gráfico de Barras (Lógica de Filtro e Empilhamento) ===
+            const eixoX = document.getElementById('eixo_x').value;
+            const eixoY = document.getElementById('eixo_y').value;
+            const stackBy = document.getElementById('stack_by').value;
+            const isStacked = stackBy !== 'none';
+
+            let labels = [];
+            let datasets = [];
+
+            if (!isStacked) {
+                // --- LÓGICA ANTIGA (BARRAS SIMPLES) ---
+                const labelsSet = new Set();
+                const dadosPorLabel = {};
+
+                dadosFiltrados.forEach(row => {
+                    let label = row[eixoX];
+                    if (eixoX === 'dia' && label) label = label.split('T')[0];
+                    if (!label) label = '(vazio)';
+                    labelsSet.add(label);
+
+                    let valor = row[eixoY];
+                    if (typeof valor !== 'number') valor = 0;
+
+                    if (!dadosPorLabel[label]) dadosPorLabel[label] = 0;
+                    dadosPorLabel[label] += valor;
+                });
+
+                labels = (eixoX === 'dia') ? Array.from(labelsSet).sort() : Array.from(labelsSet);
+                const data = labels.map(l => dadosPorLabel[l]);
+
+                datasets = [{
+                    label: eixoY.replace(/_/g, ' '),
+                    data,
+                    backgroundColor: 'rgba(1,19,52,0.8)',
+                    borderRadius: 8
+                }];
+
+            } else {
+                // --- LÓGICA NOVA (BARRAS EMPILHADAS) ---
+                const xLabelsSet = new Set();
+                const stackLabelsSet = new Set();
+                const processedData = {}; // Estrutura: { 'xLabel': { 'stackLabel': valor, ... }, ... }
+
+                dadosFiltrados.forEach(row => {
+                    let xLabel = row[eixoX] || '(vazio)';
+                    if (eixoX === 'dia' && xLabel) xLabel = xLabel.split('T')[0];
+
+                    let stackLabel = row[stackBy] || '(vazio)';
+
+                    xLabelsSet.add(xLabel);
+                    stackLabelsSet.add(stackLabel);
+
+                    if (!processedData[xLabel]) processedData[xLabel] = {};
+                    if (!processedData[xLabel][stackLabel]) processedData[xLabel][stackLabel] = 0;
+
+                    let valor = row[eixoY];
+                    if (typeof valor !== 'number') valor = 0;
+                    processedData[xLabel][stackLabel] += valor;
+                });
+
+                labels = (eixoX === 'dia') ? Array.from(xLabelsSet).sort() : Array.from(xLabelsSet);
+                const stackLabels = Array.from(stackLabelsSet).sort();
+
+                datasets = stackLabels.map((stackLabel, i) => ({
+                    label: stackLabel,
+                    // Mapeia os labels do eixo X para o valor deste stack
+                    data: labels.map(label => processedData[label]?.[stackLabel] || 0), 
+                    backgroundColor: `hsl(${i * 37 % 360}, 70%, 60%)`, // Cor dinâmica
+                    borderRadius: 4
+                }));
+            }
+
+            // --- Renderização do Gráfico de Barras ---
+            if (barChart) barChart.destroy();
+            barChart = new Chart(document.getElementById('barChart').getContext('2d'), {
+                type: 'bar',
+                data: { labels, datasets },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: { display: isStacked }, // Mostra legenda se for empilhado
+                        tooltip: { enabled: true }
+                    },
+                    scales: {
+                        x: { 
+                            ticks: { color: '#011334' },
+                            stacked: isStacked // <<< ATIVA O EMPILHAMENTO
+                        },
+                        y: { 
+                            beginAtZero: true, 
+                            ticks: { color: '#011334' },
+                            stacked: isStacked // <<< ATIVA O EMPILHAMENTO
+                        }
+                    }
+                }
+            });
+
+            // === 2. Gráfico de Pizza (Agora usa dados filtrados) ===
+            const cat = document.getElementById('pizza_categoria').value;
+            const val = document.getElementById('pizza_valor').value;
+
+            const pizzaLabelsSet = new Set();
+            const pizzaData = {};
+
+            dadosFiltrados.forEach(row => { // Usa dadosFiltrados
+                let label = row[cat];
+                if (!label) label = '(vazio)';
+                pizzaLabelsSet.add(label);
+
+                let valor = row[val];
+                if (typeof valor !== 'number') valor = 0;
+
+                if (!pizzaData[label]) pizzaData[label] = 0;
+                pizzaData[label] += valor;
+            });
+
+            const pizzaLabels = Array.from(pizzaLabelsSet);
+            const pizzaValues = pizzaLabels.map(l => pizzaData[l]);
+
+            if (pieChart) pieChart.destroy();
+            pieChart = new Chart(document.getElementById('pieChart').getContext('2d'), {
+                type: 'pie',
+                data: {
+                    labels: pizzaLabels,
+                    datasets: [{
+                        data: pizzaValues,
+                        backgroundColor: pizzaLabels.map((_, i) => `hsl(${i * 37 % 360}, 70%, 60%)`)
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: { position: 'bottom' },
+                        tooltip: { enabled: true }
+                    }
+                }
+            });
+        }
         function renderGraficos() {
             // NÃO ALTERAR: gráficos não dependem dos filtros dinâmicos de coluna
             const dadosFiltrados = getFilteredData();
