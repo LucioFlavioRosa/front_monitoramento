@@ -61,15 +61,52 @@
         ::-webkit-scrollbar-track { background: var(--peers-gray); }
         ::-webkit-scrollbar-thumb { background: var(--peers-blue); border-radius: 5px; }
         ::-webkit-scrollbar-thumb:hover { background: var(--peers-blue-02); }
-        /* Cabeçalho da tabela destacado */
-        #cabecalhoTabelaDinamico tr {
-            background: linear-gradient(135deg, var(--peers-blue) 0%, #023059 100%);
-            color: white;
+
+        /* === Filtros Dinâmicos por Coluna (Dropdowns) === */
+        .col-filter-dropdown {
+            background: white;
+            border: 1.5px solid var(--peers-blue-03);
+            border-radius: 0.5rem;
+            box-shadow: 0 2px 8px rgba(1,19,52,0.08);
+            padding: 0.25rem 1.5rem 0.25rem 0.75rem;
+            font-size: 0.95em;
+            color: var(--peers-blue);
+            transition: border 0.2s, box-shadow 0.2s;
+            margin-left: 0.25rem;
+            margin-right: 0.25rem;
+            min-width: 80px;
+            outline: none;
+            appearance: none;
+            background-image: url('data:image/svg+xml;utf8,<svg width="16" height="16" fill="%23011334" xmlns="http://www.w3.org/2000/svg"><path d="M4 6l4 4 4-4" stroke="%23011334" stroke-width="2" fill="none" stroke-linecap="round"/></svg>');
+            background-repeat: no-repeat;
+            background-position: right 0.5rem center;
+            background-size: 1em;
+        }
+        .col-filter-dropdown:hover,
+        .col-filter-dropdown:focus {
+            border-color: var(--peers-blue);
+            box-shadow: 0 0 0 2px var(--peers-blue-04);
+            background-color: var(--peers-serene-03);
+        }
+        .col-filter-icon {
+            display: inline-block;
+            vertical-align: middle;
+            margin-left: 0.25rem;
+            color: var(--peers-blue-02);
+            font-size: 1.1em;
+            cursor: pointer;
+            transition: color 0.2s;
+        }
+        .col-filter-icon:hover {
+            color: var(--peers-blue);
+        }
+        .hidden {
+            display: none !important;
         }
     </style>
 </head>
 <body>
-    <header class="header-gradient text-white py-4 md:py-6 px-4 md:px-8 shadow-lg">
+    <header class="bg-peers-dark text-white py-4 md:py-6 px-4 md:px-8 shadow-lg">
         <div class="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-3">
             <img src="https://d3fh32tca5cd7q.cloudfront.net/wp-content/uploads/2025/03/logo.svg" alt="PEERS" class="h-8 md:h-10 w-auto">
             <div class="text-xs md:text-sm text-center">
@@ -245,15 +282,17 @@
         const pageSize = 20;
         let totalRows = 0;
 
+        // === Filtros Dinâmicos por Coluna ===
+        let filtrosColunas = {}; // { coluna: valorSelecionado }
+        let valoresUnicosColunas = {}; // { coluna: [valoresUnicos] }
+
         // Função para gerar cabeçalhos dinâmicos e ordenados
         function gerarCabecalhosTabela(dados) {
             const thead = document.getElementById('cabecalhoTabelaDinamico');
             thead.innerHTML = '';
             if (!dados || dados.length === 0) {
-                let tr = document.createElement('tr');
-                tr.className = 'bg-peers-dark text-white';
-                tr.innerHTML = `<th class="px-4 py-3 font-semibold text-sm sm:text-base rounded-tl-xl">Projeto</th><th class="px-4 py-3 font-semibold text-sm sm:text-base">Usuário Executor</th><th class="px-4 py-3 font-semibold text-sm sm:text-base">Modelo</th><th class="px-4 py-3 font-semibold text-sm sm:text-base">Data</th><th class="px-4 py-3 font-semibold text-sm sm:text-base rounded-tr-xl">Valor da Métrica</th>`;
-                thead.appendChild(tr);
+                // Cabeçalho padrão
+                thead.innerHTML = `<tr><th class="px-4 py-3 font-semibold text-sm sm:text-base rounded-tl-xl">Projeto</th><th class="px-4 py-3 font-semibold text-sm sm:text-base">Usuário Executor</th><th class="px-4 py-3 font-semibold text-sm sm:text-base">Modelo</th><th class="px-4 py-3 font-semibold text-sm sm:text-base">Data</th><th class="px-4 py-3 font-semibold text-sm sm:text-base rounded-tr-xl">Valor da Métrica</th></tr>`;
                 return;
             }
             const primeiraLinha = dados[0];
@@ -291,12 +330,38 @@
             };
             // Renderizar cabeçalhos
             let tr = document.createElement('tr');
-            tr.className = 'bg-peers-dark text-white';
             ordemFinal.forEach((k, idx) => {
                 let nome = nomesAmigaveis[k] || k.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
                 let th = document.createElement('th');
                 th.textContent = nome;
                 th.className = 'px-4 py-3 font-semibold text-sm sm:text-base' + (idx === 0 ? ' rounded-tl-xl' : '') + (idx === ordemFinal.length - 1 ? ' rounded-tr-xl' : '');
+                // === Dropdown de filtro dinâmico ===
+                th.style.position = 'relative';
+                let select = document.createElement('select');
+                select.className = 'col-filter-dropdown';
+                select.setAttribute('data-col', k);
+                select.title = `Filtrar por ${nome}`;
+                // Opção "Todos"
+                let optTodos = document.createElement('option');
+                optTodos.value = '';
+                optTodos.textContent = 'Todos';
+                select.appendChild(optTodos);
+                // Opções dinâmicas
+                let valores = valoresUnicosColunas[k] || [];
+                valores.forEach(v => {
+                    let opt = document.createElement('option');
+                    opt.value = v;
+                    opt.textContent = v === null || v === undefined || v === '' ? '(vazio)' : v;
+                    select.appendChild(opt);
+                });
+                // Valor selecionado
+                select.value = filtrosColunas[k] || '';
+                select.addEventListener('change', function(e) {
+                    filtrosColunas[k] = this.value;
+                    currentPage = 1;
+                    renderTabela();
+                });
+                th.appendChild(select);
                 tr.appendChild(th);
             });
             thead.appendChild(tr);
@@ -355,6 +420,42 @@
             createOptions(modelos, 'filter_modelo');
         }
 
+        // === Filtros Dinâmicos por Coluna ===
+        function atualizarValoresUnicosColunas(dados) {
+            valoresUnicosColunas = {};
+            if (!dados || dados.length === 0) return;
+            const primeiraLinha = dados[0];
+            let chaves = Object.keys(primeiraLinha);
+            chaves.forEach(col => {
+                let set = new Set();
+                dados.forEach(row => {
+                    let v = row[col];
+                    set.add(v === undefined ? '' : v);
+                });
+                valoresUnicosColunas[col] = Array.from(set).sort((a, b) => {
+                    if (typeof a === 'number' && typeof b === 'number') return a - b;
+                    return String(a).localeCompare(String(b), 'pt-BR', { numeric: true });
+                });
+            });
+        }
+
+        function aplicarFiltrosColunas() {
+            let base = getFilteredData();
+            Object.entries(filtrosColunas).forEach(([col, val]) => {
+                if (val && val !== '') {
+                    base = base.filter(row => {
+                        // Considera (vazio) como ''
+                        if (val === '(vazio)') {
+                            return row[col] === '' || row[col] === null || row[col] === undefined;
+                        }
+                        // Conversão para string para comparação segura
+                        return String(row[col]) === String(val);
+                    });
+                }
+            });
+            return base;
+        }
+
         function buscarDados() {
             const params = {
                 dias: document.getElementById('dias').value,
@@ -381,6 +482,9 @@
                     dadosConsulta = data || [];
                     totalRows = dadosConsulta.length;
                     currentPage = 1;
+                    // === Filtros Dinâmicos por Coluna ===
+                    atualizarValoresUnicosColunas(dadosConsulta);
+                    filtrosColunas = {}; // Resetar filtros de coluna ao buscar novos dados
                     if (dadosConsulta.length > 0) {
                         const chaveMetrica = encontrarChaveMetrica(dadosConsulta);
                         atualizarComponentesUI(chaveMetrica);
@@ -415,7 +519,7 @@
 
         function renderTabela() {
             const tbody = document.getElementById('tabelaDados');
-            const dadosFiltrados = getFilteredData();
+            const dadosFiltrados = aplicarFiltrosColunas();
             totalRows = dadosFiltrados.length;
             // Gera cabeçalho dinâmico
             gerarCabecalhosTabela(dadosFiltrados);
@@ -472,7 +576,7 @@
         }
 
         function renderGraficos() {
-            const dadosFiltrados = getFilteredData();
+            const dadosFiltrados = aplicarFiltrosColunas();
 
             // === 1. Gráfico de Barras (Lógica de Filtro e Empilhamento) ===
             const eixoX = document.getElementById('eixo_x').value;
@@ -617,6 +721,9 @@
             initDashboard();
             document.getElementById('filtrosForm').addEventListener('submit', function(e) {
                 e.preventDefault();
+                // === Resetar filtros de coluna ao submeter formulário principal ===
+                filtrosColunas = {};
+                currentPage = 1;
                 buscarDados();
             });
             document.getElementById('eixo_x').addEventListener('change', renderGraficos);
@@ -635,7 +742,7 @@
                 }
             });
             document.getElementById('nextPageBtn').addEventListener('click', function() {
-                const dadosFiltrados = getFilteredData();
+                const dadosFiltrados = aplicarFiltrosColunas();
                 if ((currentPage * pageSize) < dadosFiltrados.length) {
                     currentPage++;
                     renderTabela();
