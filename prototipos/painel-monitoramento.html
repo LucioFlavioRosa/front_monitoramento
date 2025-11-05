@@ -316,6 +316,13 @@
         const pageSize = 20;
         let totalRows = 0;
 
+        // ===== FILTROS DINÂMICOS DE COLUNA =====
+        // O objeto filtrosPorColuna armazena o valor selecionado para cada coluna.
+        // Quando um valor é selecionado, getFilteredData() filtra os dados e renderTabela() atualiza a UI.
+        // A função popularDropdownsFiltro() cria os dropdowns dinamicamente para cada coluna, usando os valores únicos presentes nos dados filtrados.
+        // A função getFilteredData() aplica os filtros de coluna, normalizando valores vazios para '-'.
+        // A função renderTabela() sincroniza os dropdowns com os dados filtrados e garante que os gráficos e paginação estejam corretos.
+
         // ===================== Filtros Dinâmicos de Coluna =====================
         // Objeto que armazena o valor selecionado para cada coluna (chave: nome da coluna, valor: valor filtrado ou null)
         const filtrosPorColuna = {};
@@ -340,6 +347,14 @@
                     icon.innerHTML = '<svg width="16" height="16" fill="none" viewBox="0 0 20 20"><path d="M3 5h14M6 9h8M9 13h2" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>';
                     th.appendChild(icon);
                 }
+                // Indicador visual de filtro ativo
+                if (filtrosPorColuna[col] != null) {
+                    icon.style.color = '#F3FF99';
+                    icon.innerHTML = '<svg width="16" height="16" fill="none" viewBox="0 0 20 20"><path d="M3 5h14M6 9h8M9 13h2" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><circle cx="12" cy="4" r="2" fill="#E1FF00"/></svg>';
+                } else {
+                    icon.style.color = '#E1FF00';
+                    icon.innerHTML = '<svg width="16" height="16" fill="none" viewBox="0 0 20 20"><path d="M3 5h14M6 9h8M9 13h2" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>';
+                }
                 // Cria dropdown
                 const dropdown = document.createElement('div');
                 dropdown.className = 'filter-dropdown';
@@ -358,6 +373,7 @@
                     filtrosPorColuna[col] = null;
                     dropdown.classList.remove('active');
                     renderTabela();
+                    renderGraficos();
                 };
                 dropdown.appendChild(clearBtn);
                 // Opções de valor
@@ -370,6 +386,7 @@
                         filtrosPorColuna[col] = valor;
                         dropdown.classList.remove('active');
                         renderTabela();
+                        renderGraficos();
                     };
                     dropdown.appendChild(btn);
                 });
@@ -388,8 +405,10 @@
             });
             // Fecha dropdowns ao clicar fora
             document.addEventListener('click', function fecharDropdowns(e) {
-                document.querySelectorAll('.filter-dropdown').forEach(dd => dd.classList.remove('active'));
-            }, { once: true });
+                if (!e.target.closest('.filter-dropdown') && !e.target.closest('.filter-icon')) {
+                    document.querySelectorAll('.filter-dropdown').forEach(dd => dd.classList.remove('active'));
+                }
+            });
         }
 
         // ===================== Cabeçalhos Dinâmicos com Filtro =====================
@@ -471,7 +490,7 @@
                 // Aplica filtros dinâmicos de coluna
                 const colFiltersMatch = Object.entries(filtrosPorColuna).every(([col, val]) => {
                     if (val == null) return true;
-                    // Considera null, undefined e '-' como equivalentes
+                    // Normaliza valores vazios para '-' antes da comparação
                     let cell = row[col];
                     if (cell === undefined || cell === null || cell === '') cell = '-';
                     return cell == val;
@@ -488,6 +507,10 @@
             const tbody = document.getElementById('tabelaDados');
             const dadosFiltrados = getFilteredData();
             totalRows = dadosFiltrados.length;
+            // Resetar paginação se necessário
+            if (currentPage > Math.ceil(totalRows / pageSize)) {
+                currentPage = 1;
+            }
             // Gera cabeçalho dinâmico (com filtros)
             if (dadosFiltrados.length > 0) {
                 const primeiraLinha = dadosFiltrados[0];
@@ -635,75 +658,6 @@
                     document.getElementById('tabelaDados').innerHTML = `<tr><td colspan="5" class="text-center py-4 text-red-600">Erro ao buscar dados da API. Verifique o console (F12) para detalhes.</td></tr>`;
                     gerarCabecalhosTabela([]);
                 });
-        }
-        function getFilteredData() {
-            const filterProjeto = document.getElementById('filter_projeto').value;
-            const filterUsuario = document.getElementById('filter_usuario').value;
-            const filterModelo = document.getElementById('filter_modelo').value;
-            return dadosConsulta.filter(row => {
-                const projMatch = (filterProjeto === 'todos') || (row.projeto === filterProjeto);
-                const userMatch = (filterUsuario === 'todos') || (row.usuario_executor === filterUsuario);
-                const modelMatch = (filterModelo === 'todos') || (row.model_name === filterModelo);
-                return projMatch && userMatch && modelMatch;
-            });
-        }
-
-        function renderTabela() {
-            const tbody = document.getElementById('tabelaDados');
-            const dadosFiltrados = getFilteredData();
-            totalRows = dadosFiltrados.length;
-            // Gera cabeçalho dinâmico
-            gerarCabecalhosTabela(dadosFiltrados);
-            if (!dadosFiltrados.length) {
-                tbody.innerHTML = '<tr><td colspan="5" class="text-center py-4">A consulta não retornou dados (ou o filtro está muito restrito).</td></tr>';
-                document.getElementById('paginationInfo').textContent = '';
-                return;
-            }
-            // Descobre ordem das colunas
-            const primeiraLinha = dadosFiltrados[0];
-            let chaves = Object.keys(primeiraLinha);
-            const ordemPadrao = [
-                'projeto',
-                'usuario_executor',
-                'model_name',
-                'dia',
-                'data',
-                'job_id'
-            ];
-            const chavesPrincipais = ordemPadrao.filter(k => chaves.includes(k));
-            const chavesRestantes = chaves.filter(k => !ordemPadrao.includes(k));
-            const chavesMetricas = chavesRestantes.filter(k => typeof primeiraLinha[k] === 'number' || k.toLowerCase().includes('token') || k.toLowerCase().includes('valor') || k.toLowerCase().includes('count') || k.toLowerCase().includes('total'));
-            const chavesOutras = chavesRestantes.filter(k => !chavesMetricas.includes(k));
-            const ordemFinal = [...chavesPrincipais, ...chavesOutras, ...chavesMetricas];
-            // Paginação
-            const startIdx = (currentPage - 1) * pageSize;
-            const endIdx = Math.min(startIdx + pageSize, totalRows);
-            const pageRows = dadosFiltrados.slice(startIdx, endIdx);
-            tbody.innerHTML = pageRows.map((row, idx) => {
-                // Alterna cor de fundo
-                const bgClass = idx % 2 === 0 ? 'bg-gray-50' : 'bg-white';
-                const tds = ordemFinal.map(k => {
-                    let valor = row[k];
-                    if (valor === undefined || valor === null || valor === '') {
-                        return '<td class="px-4 py-3 border-b border-gray-200 transition-all duration-300"><span class="text-gray-400 italic">-</span></td>';
-                    }
-                    // Formatação especial para datas
-                    if ((k === 'dia' || k === 'data') && typeof valor === 'string' && valor.includes('T')) {
-                        valor = valor.split('T')[0];
-                    }
-                    // Formatação especial para valores numéricos
-                    if (typeof valor === 'number') {
-                        valor = `<span class="text-peers-blue font-semibold">${valor.toLocaleString('pt-BR', {maximumFractionDigits: 1})}</span>`;
-                    }
-                    return `<td class="px-4 py-3 border-b border-gray-200 transition-all duration-300">${valor}</td>`;
-                }).join('');
-                return `<tr class="${bgClass} hover:bg-peers-serene-02 transition-all duration-300">${tds}</tr>`;
-            }).join('');
-            // Paginação info
-            document.getElementById('paginationInfo').textContent = `Mostrando ${startIdx + 1} a ${endIdx} de ${totalRows} registros`;
-            // Botões
-            document.getElementById('prevPageBtn').disabled = currentPage === 1;
-            document.getElementById('nextPageBtn').disabled = endIdx >= totalRows;
         }
 
         function renderGraficos() {
