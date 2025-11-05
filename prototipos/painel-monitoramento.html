@@ -61,6 +61,11 @@
         ::-webkit-scrollbar-track { background: var(--peers-gray); }
         ::-webkit-scrollbar-thumb { background: var(--peers-blue); border-radius: 5px; }
         ::-webkit-scrollbar-thumb:hover { background: var(--peers-blue-02); }
+        /* Cabeçalho da tabela destacado */
+        #cabecalhoTabelaDinamico tr {
+            background: linear-gradient(135deg, var(--peers-blue) 0%, #023059 100%);
+            color: white;
+        }
     </style>
 </head>
 <body>
@@ -210,7 +215,7 @@
             <h3 class="text-lg font-bold text-peers-blue mb-4">Prévia dos Dados Filtrados</h3>
             <div class="overflow-x-auto rounded-xl shadow-inner">
                 <table class="min-w-full text-xs sm:text-sm text-left border-separate border-spacing-0 rounded-xl shadow-lg transition-all duration-300">
-                    <thead id="cabecalhoTabelaDinamico" class="bg-gradient-to-r from-peers-blue to-[#023059] text-white rounded-t-xl">
+                    <thead id="cabecalhoTabelaDinamico" class="bg-peers-dark text-white rounded-t-xl">
                         <!-- Cabeçalhos dinâmicos serão inseridos aqui -->
                     </thead>
                     <tbody id="tabelaDados"></tbody>
@@ -246,7 +251,10 @@
             thead.innerHTML = '';
             if (!dados || dados.length === 0) {
                 // Cabeçalho padrão
-                thead.innerHTML = `<tr><th class="px-4 py-3 font-semibold text-sm sm:text-base rounded-tl-xl">Projeto</th><th class="px-4 py-3 font-semibold text-sm sm:text-base">Usuário Executor</th><th class="px-4 py-3 font-semibold text-sm sm:text-base">Modelo</th><th class="px-4 py-3 font-semibold text-sm sm:text-base">Data</th><th class="px-4 py-3 font-semibold text-sm sm:text-base rounded-tr-xl">Valor da Métrica</th></tr>`;
+                let tr = document.createElement('tr');
+                tr.className = 'bg-peers-dark text-white';
+                tr.innerHTML = `<th class="px-4 py-3 font-semibold text-sm sm:text-base rounded-tl-xl">Projeto</th><th class="px-4 py-3 font-semibold text-sm sm:text-base">Usuário Executor</th><th class="px-4 py-3 font-semibold text-sm sm:text-base">Modelo</th><th class="px-4 py-3 font-semibold text-sm sm:text-base">Data</th><th class="px-4 py-3 font-semibold text-sm sm:text-base rounded-tr-xl">Valor da Métrica</th>`;
+                thead.appendChild(tr);
                 return;
             }
             const primeiraLinha = dados[0];
@@ -284,6 +292,7 @@
             };
             // Renderizar cabeçalhos
             let tr = document.createElement('tr');
+            tr.className = 'bg-peers-dark text-white';
             ordemFinal.forEach((k, idx) => {
                 let nome = nomesAmigaveis[k] || k.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
                 let th = document.createElement('th');
