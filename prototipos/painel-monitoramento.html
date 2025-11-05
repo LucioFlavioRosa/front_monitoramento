@@ -289,6 +289,7 @@
             };
             // Renderizar cabeçalhos
             let tr = document.createElement('tr');
+            tr.className = 'bg-peers-dark text-white';
             ordemFinal.forEach((k, idx) => {
                 let nome = nomesAmigaveis[k] || k.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
                 let th = document.createElement('th');
