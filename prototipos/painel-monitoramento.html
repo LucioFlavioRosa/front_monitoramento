@@ -137,7 +137,8 @@
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
                 <div class="bg-white rounded-2xl shadow-lg p-4 sm:p-6">
                     <h3 class="text-lg font-bold text-peers-blue mb-2">Gráfico de Barras</h3>
-                    <div class="flex flex-wrap gap-2 mb-4">
+                    
+                    <div class="flex flex-wrap gap-x-4 gap-y-2 mb-4">
                         <div>
                             <label class="block text-xs font-medium text-gray-700 mb-1">Eixo X</label>
                             <select id="eixo_x" class="px-2 py-1 border border-gray-300 rounded-lg text-sm">
@@ -152,6 +153,33 @@
                             <select id="eixo_y" class="px-2 py-1 border border-gray-300 rounded-lg text-sm">
                                 <option value="Valor" selected>Métrica Selecionada</option>
                             </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-gray-700 mb-1">Quebrar por</label>
+                            <select id="stack_by" class="px-2 py-1 border border-gray-300 rounded-lg text-sm">
+                                <option value="none" selected>Nenhum</option>
+                                <option value="projeto">Projeto</option>
+                                <option value="model_name">Modelo</option>
+                                <option value="usuario_executor">Usuário</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-gray-700 mb-1">Filtrar Projeto</label>
+                            <select id="filter_projeto" class="px-2 py-1 border border-gray-300 rounded-lg text-sm">
+                                <option value="todos" selected>Todos</option>
+                                </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-gray-700 mb-1">Filtrar Usuário</label>
+                            <select id="filter_usuario" class="px-2 py-1 border border-gray-300 rounded-lg text-sm">
+                                <option value="todos" selected>Todos</option>
+                                </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-gray-700 mb-1">Filtrar Modelo</label>
+                            <select id="filter_modelo" class="px-2 py-1 border border-gray-300 rounded-lg text-sm">
+                                <option value="todos" selected>Todos</option>
+                                </select>
                         </div>
                     </div>
                     <canvas id="barChart" height="220" aria-label="Gráfico de Barras" role="img"></canvas>
@@ -202,13 +230,13 @@
 
     <script>
         const APP_SERVICE_URL = "https://poc-agent-revisor-monitoramento-g2grdzdtcragbfhk.centralus-01.azurewebsites.net";
-        let dadosConsulta = [];
+        let dadosConsulta = []; // Dados brutos da API
         let barChart = null;
         let pieChart = null;
-        let chaveMetricaAtual = 'Valor'; // Armazena a chave da métrica (ex: 'Avg_tokens_entrada')
+        let chaveMetricaAtual = 'Valor'; 
 
         function initDashboard() {
-            // Configurar valores padrão dos filtros
+            // Valores padrão
             document.getElementById('dias').value = '30';
             document.getElementById('coluna_alvo').value = 'tokens_entrada';
             document.getElementById('op').value = 'avg';
@@ -218,46 +246,63 @@
             document.getElementById('eixo_x').value = 'dia';
             document.getElementById('pizza_categoria').value = 'projeto';
             
-            // Primeira requisição
             buscarDados();
         }
 
-        /**
-         * Encontra dinamicamente o nome da chave da métrica (ex: Avg_tokens_entrada) 
-         * na resposta da API, assumindo que é a única chave que não é uma das 
-         * colunas de agrupamento conhecidas.
-         */
         function encontrarChaveMetrica(dados) {
-            if (!dados || dados.length === 0) return 'Valor'; // Fallback
-            
+            if (!dados || dados.length === 0) return 'Valor';
             const firstRow = dados[0];
             const chavesConhecidas = ['projeto', 'usuario_executor', 'model_name', 'dia', 'job_id'];
-            
-            // Encontra a chave na primeira linha que NÃO é uma das chaves conhecidas
             const chaveMetrica = Object.keys(firstRow).find(key => !chavesConhecidas.includes(key));
-            
-            return chaveMetrica || 'Valor'; // Retorna a chave encontrada ou um fallback
+            return chaveMetrica || 'Valor';
         }
 
-        /**
-         * Atualiza os <select> dos gráficos e o header da tabela com 
-         * o nome da métrica descoberta.
-         */
         function atualizarComponentesUI(chaveMetrica) {
             chaveMetricaAtual = chaveMetrica;
-            
-            // Formata o nome para exibição (ex: "Avg_tokens_entrada" -> "Avg tokens entrada")
             const nomeExibicao = chaveMetrica.replace(/_/g, ' ');
 
-            // Atualiza os dropdowns dos gráficos
             const eixoYSelect = document.getElementById('eixo_y');
             const pizzaValSelect = document.getElementById('pizza_valor');
             
             eixoYSelect.innerHTML = `<option value="${chaveMetrica}" selected>${nomeExibicao}</option>`;
             pizzaValSelect.innerHTML = `<option value="${chaveMetrica}" selected>${nomeExibicao}</option>`;
             
-            // Atualiza o header da tabela
             document.getElementById('thValor').textContent = nomeExibicao;
+        }
+
+        /**
+         * NOVO: Popula os menus de filtro com base nos dados recebidos
+         */
+        function popularFiltros() {
+            const projetos = new Set();
+            const usuarios = new Set();
+            const modelos = new Set();
+            
+            dadosConsulta.forEach(row => {
+                if (row.projeto) projetos.add(row.projeto);
+                if (row.usuario_executor) usuarios.add(row.usuario_executor);
+                if (row.model_name) modelos.add(row.model_name);
+            });
+
+            // Função auxiliar para criar as opções
+            const createOptions = (set, selectId) => {
+                const select = document.getElementById(selectId);
+                const currentValue = select.value; // Salva o valor atual
+                
+                // Limpa (mantendo a opção "Todos")
+                select.innerHTML = '<option value="todos" selected>Todos</option>'; 
+                
+                Array.from(set).sort().forEach(item => {
+                    select.innerHTML += `<option value="${item}">${item}</option>`;
+                });
+
+                // Restaura o valor se ele ainda existir
+                select.value = currentValue;
+            };
+
+            createOptions(projetos, 'filter_projeto');
+            createOptions(usuarios, 'filter_usuario');
+            createOptions(modelos, 'filter_modelo');
         }
 
         function buscarDados() {
@@ -273,13 +318,11 @@
             const url = new URL(APP_SERVICE_URL + '/get_token_stats');
             Object.entries(params).forEach(([k, v]) => url.searchParams.append(k, v));
             
-            // Loading state
             document.getElementById('tabelaDados').innerHTML = '<tr><td colspan="5" class="text-center py-4">Carregando...</td></tr>';
             
             fetch(url)
                 .then(resp => {
                     if (!resp.ok) {
-                        // Tenta ler a mensagem de erro do corpo da resposta, se houver
                         return resp.text().then(text => {
                              throw new Error(`Erro na API: ${resp.status} - ${text || 'Sem detalhes'}`);
                         });
@@ -290,17 +333,14 @@
                     dadosConsulta = data || [];
                     
                     if (dadosConsulta.length > 0) {
-                        // 1. Descobrir a chave da métrica dinamicamente
                         const chaveMetrica = encontrarChaveMetrica(dadosConsulta);
-                        
-                        // 2. Atualizar UI (dropdowns, header da tabela)
                         atualizarComponentesUI(chaveMetrica);
+                        popularFiltros(); // NOVO: Popula os filtros
                     } else {
-                        // Reseta se não vier dados
                         atualizarComponentesUI('Valor');
+                        popularFiltros(); // NOVO: Limpa os filtros
                     }
-
-                    // 3. Renderizar tabela e gráficos
+                    
                     renderTabela();
                     renderGraficos();
                 })
@@ -310,17 +350,34 @@
                 });
         }
 
+        /**
+         * NOVO: Aplica os filtros e retorna os dados filtrados
+         */
+        function getFilteredData() {
+            const filterProjeto = document.getElementById('filter_projeto').value;
+            const filterUsuario = document.getElementById('filter_usuario').value;
+            const filterModelo = document.getElementById('filter_modelo').value;
+
+            return dadosConsulta.filter(row => {
+                const projMatch = (filterProjeto === 'todos') || (row.projeto === filterProjeto);
+                const userMatch = (filterUsuario === 'todos') || (row.usuario_executor === filterUsuario);
+                const modelMatch = (filterModelo === 'todos') || (row.model_name === filterModelo);
+                return projMatch && userMatch && modelMatch;
+            });
+        }
+
+
         function renderTabela() {
             const tbody = document.getElementById('tabelaDados');
-            if (!dadosConsulta.length) {
-                tbody.innerHTML = '<tr><td colspan="5" class="text-center py-4">A consulta não retornou dados.</td></tr>';
+            const dadosFiltrados = getFilteredData(); // Usa dados filtrados
+
+            if (!dadosFiltrados.length) {
+                tbody.innerHTML = '<tr><td colspan="5" class="text-center py-4">A consulta não retornou dados (ou o filtro está muito restrito).</td></tr>';
                 return;
             }
             
-            tbody.innerHTML = dadosConsulta.slice(0, 50).map(row => {
-                // Usa a chaveMetricaAtual para buscar o valor dinamicamente
+            tbody.innerHTML = dadosFiltrados.slice(0, 50).map(row => {
                 const valor = row[chaveMetricaAtual];
-                
                 return `
                 <tr>
                     <td class="px-2 py-1 border-b">${row.projeto || ''}</td>
@@ -332,68 +389,123 @@
             `}).join('');
         }
 
+        /**
+         * ATUALIZADO: Lógica de renderização de gráficos totalmente reescrita
+         * para suportar filtragem e barras empilhadas.
+         */
         function renderGraficos() {
-            // Gráfico de Barras
+            const dadosFiltrados = getFilteredData();
+
+            // === 1. Gráfico de Barras (Lógica de Filtro e Empilhamento) ===
             const eixoX = document.getElementById('eixo_x').value;
-            const eixoY = document.getElementById('eixo_y').value; // Agora lê o valor dinâmico
-            
-            const labelsSet = new Set();
-            const dadosPorLabel = {};
-            
-            dadosConsulta.forEach(row => {
-                let label = row[eixoX];
-                if (eixoX === 'dia' && label) label = label.split('T')[0];
-                if (!label) label = '(vazio)';
-                labelsSet.add(label);
+            const eixoY = document.getElementById('eixo_y').value;
+            const stackBy = document.getElementById('stack_by').value;
+            const isStacked = stackBy !== 'none';
+
+            let labels = [];
+            let datasets = [];
+
+            if (!isStacked) {
+                // --- LÓGICA ANTIGA (BARRAS SIMPLES) ---
+                const labelsSet = new Set();
+                const dadosPorLabel = {};
                 
-                let valor = row[eixoY]; // Usa a chave do dropdown
-                if (typeof valor !== 'number') valor = 0;
+                dadosFiltrados.forEach(row => {
+                    let label = row[eixoX];
+                    if (eixoX === 'dia' && label) label = label.split('T')[0];
+                    if (!label) label = '(vazio)';
+                    labelsSet.add(label);
+                    
+                    let valor = row[eixoY];
+                    if (typeof valor !== 'number') valor = 0;
+                    
+                    if (!dadosPorLabel[label]) dadosPorLabel[label] = 0;
+                    dadosPorLabel[label] += valor;
+                });
                 
-                if (!dadosPorLabel[label]) dadosPorLabel[label] = 0;
-                dadosPorLabel[label] += valor;
-            });
-            
-            const labels = Array.from(labelsSet);
-            const data = labels.map(l => dadosPorLabel[l]);
-            
+                labels = (eixoX === 'dia') ? Array.from(labelsSet).sort() : Array.from(labelsSet);
+                const data = labels.map(l => dadosPorLabel[l]);
+
+                datasets = [{
+                    label: eixoY.replace(/_/g, ' '),
+                    data,
+                    backgroundColor: 'rgba(1,19,52,0.8)',
+                    borderRadius: 8
+                }];
+
+            } else {
+                // --- LÓGICA NOVA (BARRAS EMPILHADAS) ---
+                const xLabelsSet = new Set();
+                const stackLabelsSet = new Set();
+                const processedData = {}; // Estrutura: { 'xLabel': { 'stackLabel': valor, ... }, ... }
+
+                dadosFiltrados.forEach(row => {
+                    let xLabel = row[eixoX] || '(vazio)';
+                    if (eixoX === 'dia' && xLabel) xLabel = xLabel.split('T')[0];
+                    
+                    let stackLabel = row[stackBy] || '(vazio)';
+                    
+                    xLabelsSet.add(xLabel);
+                    stackLabelsSet.add(stackLabel);
+
+                    if (!processedData[xLabel]) processedData[xLabel] = {};
+                    if (!processedData[xLabel][stackLabel]) processedData[xLabel][stackLabel] = 0;
+                    
+                    let valor = row[eixoY];
+                    if (typeof valor !== 'number') valor = 0;
+                    processedData[xLabel][stackLabel] += valor;
+                });
+
+                labels = (eixoX === 'dia') ? Array.from(xLabelsSet).sort() : Array.from(xLabelsSet);
+                const stackLabels = Array.from(stackLabelsSet).sort();
+
+                datasets = stackLabels.map((stackLabel, i) => ({
+                    label: stackLabel,
+                    // Mapeia os labels do eixo X para o valor deste stack
+                    data: labels.map(label => processedData[label]?.[stackLabel] || 0), 
+                    backgroundColor: `hsl(${i * 37 % 360}, 70%, 60%)`, // Cor dinâmica
+                    borderRadius: 4
+                }));
+            }
+
+            // --- Renderização do Gráfico de Barras ---
             if (barChart) barChart.destroy();
             barChart = new Chart(document.getElementById('barChart').getContext('2d'), {
                 type: 'bar',
-                data: {
-                    labels,
-                    datasets: [{
-                        label: eixoY.replace(/_/g, ' '),
-                        data,
-                        backgroundColor: 'rgba(1,19,52,0.8)',
-                        borderRadius: 8
-                    }]
-                },
+                data: { labels, datasets },
                 options: {
                     responsive: true,
                     plugins: {
-                        legend: { display: false },
+                        legend: { display: isStacked }, // Mostra legenda se for empilhado
                         tooltip: { enabled: true }
                     },
                     scales: {
-                        x: { ticks: { color: '#011334' } },
-                        y: { beginAtZero: true, ticks: { color: '#011334' } }
+                        x: { 
+                            ticks: { color: '#011334' },
+                            stacked: isStacked // <<< ATIVA O EMPILHAMENTO
+                        },
+                        y: { 
+                            beginAtZero: true, 
+                            ticks: { color: '#011334' },
+                            stacked: isStacked // <<< ATIVA O EMPILHAMENTO
+                        }
                     }
                 }
             });
 
-            // Gráfico de Pizza
+            // === 2. Gráfico de Pizza (Agora usa dados filtrados) ===
             const cat = document.getElementById('pizza_categoria').value;
-            const val = document.getElementById('pizza_valor').value; // Agora lê o valor dinâmico
+            const val = document.getElementById('pizza_valor').value;
             
             const pizzaLabelsSet = new Set();
             const pizzaData = {};
             
-            dadosConsulta.forEach(row => {
+            dadosFiltrados.forEach(row => { // Usa dadosFiltrados
                 let label = row[cat];
                 if (!label) label = '(vazio)';
                 pizzaLabelsSet.add(label);
                 
-                let valor = row[val]; // Usa a chave do dropdown
+                let valor = row[val];
                 if (typeof valor !== 'number') valor = 0;
                 
                 if (!pizzaData[label]) pizzaData[label] = 0;
@@ -423,17 +535,27 @@
             });
         }
 
-        // Eventos de filtro e seleção de eixos
+        // --- Eventos de filtro e seleção de eixos ---
         document.addEventListener('DOMContentLoaded', () => {
             initDashboard();
             
+            // Botão de filtro principal
             document.getElementById('filtrosForm').addEventListener('submit', function(e) {
                 e.preventDefault();
                 buscarDados();
             });
             
+            // Controles do Gráfico de Barras
             document.getElementById('eixo_x').addEventListener('change', renderGraficos);
             document.getElementById('eixo_y').addEventListener('change', renderGraficos);
+            document.getElementById('stack_by').addEventListener('change', renderGraficos);
+        
+            // NOVOS: Filtros Categoriais
+            document.getElementById('filter_projeto').addEventListener('change', renderGraficos);
+            document.getElementById('filter_usuario').addEventListener('change', renderGraficos);
+            document.getElementById('filter_modelo').addEventListener('change', renderGraficos);
+
+            // Controles do Gráfico de Pizza
             document.getElementById('pizza_categoria').addEventListener('change', renderGraficos);
             document.getElementById('pizza_valor').addEventListener('change', renderGraficos);
         });
