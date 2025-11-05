@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <title>Teste Manual - Painel Monitoramento UI</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --peers-blue: #011334;
+            --peers-lime: #E1FF00;
+            --peers-serene: #D8E8EE;
+            --peers-white: #FFFFFF;
+            --peers-gray: #F5F5F5;
+            --peers-blue-02: #677185;
+            --peers-blue-03: #99A1AE;
+            --peers-blue-04: #CCD0D6;
+            --peers-lime-02: #F3FF99;
+            --peers-lime-03: #F9FFCC;
+            --peers-serene-02: #E8F1F5;
+            --peers-serene-03: #EFF6F8;
+        }
+        * {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        }
+        body {
+            background: linear-gradient(135deg, #F8FAFB 0%, var(--peers-serene) 100%);
+            min-height: 100vh;
+        }
+        .table-container {
+            background: white;
+            border-radius: 1.25rem;
+            box-shadow: 0 4px 12px rgba(1,19,52,0.08);
+            padding: 2rem;
+            margin: 2rem auto;
+            max-width: 1000px;
+        }
+        table {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0;
+            overflow: hidden;
+            border-radius: 1rem;
+        }
+        thead tr {
+            background: linear-gradient(90deg, var(--peers-blue) 0%, #023059 100%);
+        }
+        thead th {
+            color: var(--peers-lime);
+            font-weight: 700;
+            font-size: 1rem;
+            padding: 1rem 0.75rem;
+            border-bottom: 2px solid var(--peers-blue-04);
+            text-align: left;
+            letter-spacing: 0.03em;
+        }
+        tbody tr {
+            transition: background 0.2s;
+        }
+        tbody tr:hover {
+            background: linear-gradient(90deg, var(--peers-lime-02) 0%, var(--peers-serene-02) 100%);
+        }
+        tbody td {
+            padding: 0.75rem;
+            border-bottom: 1px solid var(--peers-blue-04);
+            font-size: 0.95rem;
+            color: var(--peers-blue);
+        }
+        @media (max-width: 768px) {
+            .table-container {
+                padding: 0.5rem;
+            }
+            thead th, tbody td {
+                padding: 0.5rem;
+                font-size: 0.85rem;
+            }
+        }
+        @media (max-width: 480px) {
+            .table-container {
+                padding: 0.25rem;
+            }
+            table, thead, tbody, th, td, tr {
+                display: block;
+            }
+            thead {
+                display: none;
+            }
+            tbody tr {
+                margin-bottom: 1rem;
+                border-radius: 0.75rem;
+                box-shadow: 0 2px 6px rgba(1,19,52,0.07);
+                background: white;
+            }
+            tbody td {
+                border: none;
+                position: relative;
+                padding-left: 50%;
+                min-height: 2.5rem;
+            }
+            tbody td:before {
+                position: absolute;
+                left: 1rem;
+                top: 0.75rem;
+                width: 45%;
+                white-space: nowrap;
+                font-weight: 600;
+                color: var(--peers-blue-02);
+                content: attr(data-label);
+                font-size: 0.8rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="table-container">
+        <h2 class="text-2xl font-bold text-peers-blue mb-6 text-center">Prévia dos Dados - Teste UI</h2>
+        <table aria-label="Prévia dos Dados">
+            <thead>
+                <tr>
+                    <th>Projeto</th>
+                    <th>Usuário</th>
+                    <th>Modelo</th>
+                    <th>Dia</th>
+                    <th>Valor</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td data-label="Projeto">Projeto Alpha</td>
+                    <td data-label="Usuário">joao.silva</td>
+                    <td data-label="Modelo">gpt-4</td>
+                    <td data-label="Dia">2024-06-01</td>
+                    <td data-label="Valor">1.234</td>
+                </tr>
+                <tr>
+                    <td data-label="Projeto">Projeto Beta</td>
+                    <td data-label="Usuário">maria.oliveira</td>
+                    <td data-label="Modelo">gpt-3.5</td>
+                    <td data-label="Dia">2024-06-02</td>
+                    <td data-label="Valor">2.567</td>
+                </tr>
+                <tr>
+                    <td data-label="Projeto">Projeto Gamma</td>
+                    <td data-label="Usuário">carlos.souza</td>
+                    <td data-label="Modelo">gpt-4</td>
+                    <td data-label="Dia">2024-06-03</td>
+                    <td data-label="Valor">3.890</td>
+                </tr>
+                <tr>
+                    <td data-label="Projeto">Projeto Delta</td>
+                    <td data-label="Usuário">ana.pereira</td>
+                    <td data-label="Modelo">gpt-3.5</td>
+                    <td data-label="Dia">2024-06-04</td>
+                    <td data-label="Valor">1.120</td>
+                </tr>
+            </tbody>
+        </table>
+        <div class="mt-8">
+            <h3 class="text-lg font-semibold text-peers-blue mb-2">Checklist Manual de Teste</h3>
+            <ol class="list-decimal list-inside text-gray-700 space-y-2">
+                <li>Os nomes das colunas estão visíveis e corretos: Projeto, Usuário, Modelo, Dia, Valor.</li>
+                <li>O design da tabela segue o padrão moderno e fluido do layout do Assessment (bordas arredondadas, cores, fontes, sombra, hover).</li>
+                <li>A tabela é responsiva: em telas pequenas, cada célula mostra o nome da coluna via <code>data-label</code> e layout "card".</li>
+                <li>O hover nas linhas do corpo da tabela aplica gradiente suave.</li>
+                <li>A formatação dos dados nas células está correta (valores numéricos, datas, nomes).</li>
+                <li>Testar em diferentes tamanhos de tela (desktop, tablet, mobile).</li>
+                <li>Testar navegação por teclado (tab, foco, acessibilidade).</li>
+            </ol>
+            <p class="mt-4 text-xs text-gray-500">Para testes automatizados, recomenda-se usar Selenium, Playwright ou Cypress para validar os critérios acima.</p>
+        </div>
+    </div>
+</body>
+</html>
