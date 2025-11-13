@@ -66,7 +66,6 @@
             background: linear-gradient(135deg, var(--peers-blue) 0%, #023059 100%);
             color: white;
         }
-
         /* ====== Filtros Dinâmicos de Coluna ====== */
         .filter-icon {
             display: inline-block;
@@ -136,6 +135,11 @@
                 min-width: 120px;
                 font-size: 0.92rem;
             }
+        }
+        /* Feedback visual para ícone de filtro ativo */
+        .filter-icon-active {
+            color: #F3FF99;
+            font-weight: bold;
         }
     </style>
 </head>
@@ -213,7 +217,6 @@
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
                 <div class="bg-white rounded-2xl shadow-lg p-4 sm:p-6">
                     <h3 class="text-lg font-bold text-peers-blue mb-2">Gráfico de Barras</h3>
-
                     <div class="flex flex-wrap gap-x-4 gap-y-2 mb-4">
                         <div>
                             <label class="block text-xs font-medium text-gray-700 mb-1">Eixo X</label>
@@ -243,19 +246,19 @@
                             <label class="block text-xs font-medium text-gray-700 mb-1">Filtrar Projeto</label>
                             <select id="filter_projeto" class="px-2 py-1 border border-gray-300 rounded-lg text-sm">
                                 <option value="todos" selected>Todos</option>
-                                </select>
+                            </select>
                         </div>
                         <div>
                             <label class="block text-xs font-medium text-gray-700 mb-1">Filtrar Usuário</label>
                             <select id="filter_usuario" class="px-2 py-1 border border-gray-300 rounded-lg text-sm">
                                 <option value="todos" selected>Todos</option>
-                                </select>
+                            </select>
                         </div>
                         <div>
                             <label class="block text-xs font-medium text-gray-700 mb-1">Filtrar Modelo</label>
                             <select id="filter_modelo" class="px-2 py-1 border border-gray-300 rounded-lg text-sm">
                                 <option value="todos" selected>Todos</option>
-                                </select>
+                            </select>
                         </div>
                     </div>
                     <canvas id="barChart" height="220" aria-label="Gráfico de Barras" role="img"></canvas>
@@ -315,43 +318,31 @@
         const pageSize = 20;
         let totalRows = 0;
 
-        // ===== FILTROS DINÂMICOS DE COLUNA =====
-        // O objeto filtrosPorColuna armazena o valor selecionado para cada coluna.
-        // Quando um valor é selecionado, getFilteredData() filtra os dados e renderTabela() atualiza a UI.
-        // A função popularDropdownsFiltro() cria os dropdowns dinamicamente para cada coluna, usando os valores únicos presentes nos dados filtrados.
-        // A função getFilteredData() aplica os filtros de coluna, normalizando valores vazios para '-'.
-        // A função renderTabela() sincroniza os dropdowns com os dados filtrados e garante que os gráficos e paginação estejam corretos.
-
         // ===================== Filtros Dinâmicos de Coluna =====================
         // Objeto que armazena o valor selecionado para cada coluna (chave: nome da coluna, valor: valor filtrado ou null)
         const filtrosPorColuna = {};
          * Função para popular os dropdowns de filtro dinâmico em cada cabeçalho de coluna da tabela.
          * Para cada coluna, cria um dropdown com os valores únicos encontrados nos dados filtrados.
          * O valor selecionado é armazenado em filtrosPorColuna.
+         * Agora remove ícones/dropdowns antigos, marca opção selecionada, feedback visual no ícone, e listener permanente para fechar dropdowns.
          */
         function popularDropdownsFiltro(dados, ordemFinal) {
-            // Remove dropdowns antigos
+            // Remove dropdowns e ícones antigos
             document.querySelectorAll('.filter-dropdown').forEach(el => el.remove());
+            document.querySelectorAll('.filter-icon').forEach(el => el.remove());
             // Para cada coluna, cria dropdown de filtro
             ordemFinal.forEach((col, idx) => {
                 const th = document.querySelector(`#cabecalhoTabelaDinamico th[data-col='${col}']`);
                 if (!th) return;
                 // Cria ícone de filtro
-                let icon = th.querySelector('.filter-icon');
-                if (!icon) {
-                    icon = document.createElement('span');
-                    icon.className = 'filter-icon';
-                    icon.innerHTML = '<svg width="16" height="16" fill="none" viewBox="0 0 20 20"><path d="M3 5h14M6 9h8M9 13h2" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>';
-                    th.appendChild(icon);
-                }
-                // Indicador visual de filtro ativo
+                let icon = document.createElement('span');
+                icon.className = 'filter-icon';
+                icon.innerHTML = '<svg width="16" height="16" fill="none" viewBox="0 0 20 20"><path d="M3 5h14M6 9h8M9 13h2" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>';
+                // Feedback visual se filtro ativo
                 if (filtrosPorColuna[col] != null) {
-                    icon.style.color = '#F3FF99';
-                    icon.innerHTML = '<svg width="16" height="16" fill="none" viewBox="0 0 20 20"><path d="M3 5h14M6 9h8M9 13h2" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><circle cx="12" cy="4" r="2" fill="#E1FF00"/></svg>';
-                } else {
-                    icon.style.color = '#E1FF00';
-                    icon.innerHTML = '<svg width="16" height="16" fill="none" viewBox="0 0 20 20"><path d="M3 5h14M6 9h8M9 13h2" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>';
+                    icon.classList.add('filter-icon-active');
                 }
+                th.appendChild(icon);
                 // Cria dropdown
                 const dropdown = document.createElement('div');
                 dropdown.className = 'filter-dropdown';
@@ -369,9 +360,9 @@
                 clearBtn.onclick = function(e) {
                     e.stopPropagation();
                     filtrosPorColuna[col] = null;
+                    currentPage = 1;
                     dropdown.classList.remove('active');
                     renderTabela();
-                    renderGraficos();
                 };
                 dropdown.appendChild(clearBtn);
                 // Opções de valor
@@ -383,11 +374,18 @@
                     btn.onclick = function(e) {
                         e.stopPropagation();
                         filtrosPorColuna[col] = valor;
+                        currentPage = 1;
                         dropdown.classList.remove('active');
                         renderTabela();
-                        renderGraficos();
                     };
                     dropdown.appendChild(btn);
+                });
+                // Atualiza visual da opção selecionada (remove 'selected' de todas, aplica na correta)
+                Array.from(dropdown.querySelectorAll('.filter-dropdown-option')).forEach(btn => {
+                    btn.classList.remove('selected');
+                    if (btn.textContent === (filtrosPorColuna[col] ?? '')) {
+                        btn.classList.add('selected');
+                    }
                 });
                 // Posiciona dropdown
                 th.style.position = 'relative';
@@ -403,8 +401,8 @@
                     dropdown.classList.toggle('active');
                 };
             });
-            // Fecha dropdowns ao clicar fora
-            document.addEventListener('click', function fecharDropdowns(e) {
+            // Listener permanente para fechar dropdowns ao clicar fora
+            document.addEventListener('click', function(e) {
                 if (!e.target.closest('.filter-dropdown') && !e.target.closest('.filter-icon')) {
                     document.querySelectorAll('.filter-dropdown').forEach(dd => dd.classList.remove('active'));
                 }
@@ -471,8 +469,6 @@
                 tr.appendChild(th);
             });
             thead.appendChild(tr);
-            // Adiciona dropdowns de filtro dinâmico
-            popularDropdownsFiltro(dados, ordemFinal);
         }
   
          * Função que retorna os dados filtrados de acordo com os filtros de projeto, usuário, modelo e os filtros dinâmicos de coluna.
@@ -489,7 +485,7 @@
                 // Aplica filtros dinâmicos de coluna
                 const colFiltersMatch = Object.entries(filtrosPorColuna).every(([col, val]) => {
                     if (val == null) return true;
-                    // Normaliza valores vazios para '-' antes da comparação
+                    // Considera null, undefined e '-' como equivalentes
                     let cell = row[col];
                     if (cell === undefined || cell === null || cell === '') cell = '-';
                     return cell == val;
@@ -501,15 +497,12 @@
         /**
          * Função que renderiza o corpo da tabela de dados, aplicando os filtros dinâmicos de coluna e a paginação.
          * Também chama gerarCabecalhosTabela para garantir que os dropdowns de filtro estejam sincronizados.
+         * Chama popularDropdownsFiltro após gerar cabeçalhos e antes de renderizar corpo.
          */
         function renderTabela() {
             const tbody = document.getElementById('tabelaDados');
             const dadosFiltrados = getFilteredData();
             totalRows = dadosFiltrados.length;
-            // Resetar paginação se necessário
-            if (currentPage > Math.ceil(totalRows / pageSize)) {
-                currentPage = 1;
-            }
             // Gera cabeçalho dinâmico (com filtros)
             if (dadosFiltrados.length > 0) {
                 const primeiraLinha = dadosFiltrados[0];
@@ -529,6 +522,7 @@
                 const chavesOutras = chavesRestantes.filter(k => !chavesMetricas.includes(k));
                 const ordemFinal = [...chavesPrincipais, ...chavesOutras, ...chavesMetricas];
                 gerarCabecalhosTabela(dadosFiltrados);
+                popularDropdownsFiltro(dadosFiltrados, ordemFinal);
                 // Paginação
                 const startIdx = (currentPage - 1) * pageSize;
                 const endIdx = Math.min(startIdx + pageSize, totalRows);
@@ -556,6 +550,7 @@
                 document.getElementById('nextPageBtn').disabled = endIdx >= totalRows;
             } else {
                 gerarCabecalhosTabela([]);
+                popularDropdownsFiltro([], []);
                 tbody.innerHTML = '<tr><td colspan="5" class="text-center py-4">A consulta não retornou dados (ou o filtro está muito restrito).</td></tr>';
                 document.getElementById('paginationInfo').textContent = '';
             }
@@ -588,7 +583,6 @@
             const pizzaValSelect = document.getElementById('pizza_valor');
             eixoYSelect.innerHTML = `<option value="${chaveMetrica}" selected>${nomeExibicao}</option>`;
             pizzaValSelect.innerHTML = `<option value="${chaveMetrica}" selected>${nomeExibicao}</option>`;
-            // thValor removido, pois cabeçalho agora é dinâmico
         }
 
         function popularFiltros() {
@@ -660,152 +654,61 @@
                 });
         }
 
-        function getFilteredData() {
-            const filterProjeto = document.getElementById('filter_projeto').value;
-            const filterUsuario = document.getElementById('filter_usuario').value;
-            const filterModelo = document.getElementById('filter_modelo').value;
-            return dadosConsulta.filter(row => {
-                const projMatch = (filterProjeto === 'todos') || (row.projeto === filterProjeto);
-                const userMatch = (filterUsuario === 'todos') || (row.usuario_executor === filterUsuario);
-                const modelMatch = (filterModelo === 'todos') || (row.model_name === filterModelo);
-                return projMatch && userMatch && modelMatch;
-            });
-        }
-
-        function renderTabela() {
-            const tbody = document.getElementById('tabelaDados');
-            const dadosFiltrados = getFilteredData();
-            totalRows = dadosFiltrados.length;
-            // Gera cabeçalho dinâmico
-            gerarCabecalhosTabela(dadosFiltrados);
-            if (!dadosFiltrados.length) {
-                tbody.innerHTML = '<tr><td colspan="5" class="text-center py-4">A consulta não retornou dados (ou o filtro está muito restrito).</td></tr>';
-                document.getElementById('paginationInfo').textContent = '';
-                return;
-            }
-            // Descobre ordem das colunas
-            const primeiraLinha = dadosFiltrados[0];
-            let chaves = Object.keys(primeiraLinha);
-            const ordemPadrao = [
-                'projeto',
-                'usuario_executor',
-                'model_name',
-                'dia',
-                'data',
-                'job_id'
-            ];
-            const chavesPrincipais = ordemPadrao.filter(k => chaves.includes(k));
-            const chavesRestantes = chaves.filter(k => !ordemPadrao.includes(k));
-            const chavesMetricas = chavesRestantes.filter(k => typeof primeiraLinha[k] === 'number' || k.toLowerCase().includes('token') || k.toLowerCase().includes('valor') || k.toLowerCase().includes('count') || k.toLowerCase().includes('total'));
-            const chavesOutras = chavesRestantes.filter(k => !chavesMetricas.includes(k));
-            const ordemFinal = [...chavesPrincipais, ...chavesOutras, ...chavesMetricas];
-            // Paginação
-            const startIdx = (currentPage - 1) * pageSize;
-            const endIdx = Math.min(startIdx + pageSize, totalRows);
-            const pageRows = dadosFiltrados.slice(startIdx, endIdx);
-            tbody.innerHTML = pageRows.map((row, idx) => {
-                // Alterna cor de fundo
-                const bgClass = idx % 2 === 0 ? 'bg-gray-50' : 'bg-white';
-                const tds = ordemFinal.map(k => {
-                    let valor = row[k];
-                    if (valor === undefined || valor === null || valor === '') {
-                        return '<td class="px-4 py-3 border-b border-gray-200 transition-all duration-300"><span class="text-gray-400 italic">-</span></td>';
-                    }
-                    // Formatação especial para datas
-                    if ((k === 'dia' || k === 'data') && typeof valor === 'string' && valor.includes('T')) {
-                        valor = valor.split('T')[0];
-                    }
-                    // Formatação especial para valores numéricos
-                    if (typeof valor === 'number') {
-                        valor = `<span class="text-peers-blue font-semibold">${valor.toLocaleString('pt-BR', {maximumFractionDigits: 1})}</span>`;
-                    }
-                    return `<td class="px-4 py-3 border-b border-gray-200 transition-all duration-300">${valor}</td>`;
-                }).join('');
-                return `<tr class="${bgClass} hover:bg-peers-serene-02 transition-all duration-300">${tds}</tr>`;
-            }).join('');
-            // Paginação info
-            document.getElementById('paginationInfo').textContent = `Mostrando ${startIdx + 1} a ${endIdx} de ${totalRows} registros`;
-            // Botões
-            document.getElementById('prevPageBtn').disabled = currentPage === 1;
-            document.getElementById('nextPageBtn').disabled = endIdx >= totalRows;
-        }
-
         function renderGraficos() {
             const dadosFiltrados = getFilteredData();
-
             // === 1. Gráfico de Barras (Lógica de Filtro e Empilhamento) ===
             const eixoX = document.getElementById('eixo_x').value;
             const eixoY = document.getElementById('eixo_y').value;
             const stackBy = document.getElementById('stack_by').value;
             const isStacked = stackBy !== 'none';
-
             let labels = [];
             let datasets = [];
-
             if (!isStacked) {
-                // --- LÓGICA ANTIGA (BARRAS SIMPLES) ---
                 const labelsSet = new Set();
                 const dadosPorLabel = {};
-
                 dadosFiltrados.forEach(row => {
                     let label = row[eixoX];
                     if (eixoX === 'dia' && label) label = label.split('T')[0];
                     if (!label) label = '(vazio)';
                     labelsSet.add(label);
-
                     let valor = row[eixoY];
                     if (typeof valor !== 'number') valor = 0;
-
                     if (!dadosPorLabel[label]) dadosPorLabel[label] = 0;
                     dadosPorLabel[label] += valor;
                 });
-
                 labels = (eixoX === 'dia') ? Array.from(labelsSet).sort() : Array.from(labelsSet);
                 const data = labels.map(l => dadosPorLabel[l]);
-
                 datasets = [{
                     label: eixoY.replace(/_/g, ' '),
                     data,
                     backgroundColor: 'rgba(1,19,52,0.8)',
                     borderRadius: 8
                 }];
-
             } else {
-                // --- LÓGICA NOVA (BARRAS EMPILHADAS) ---
                 const xLabelsSet = new Set();
                 const stackLabelsSet = new Set();
-                const processedData = {}; // Estrutura: { 'xLabel': { 'stackLabel': valor, ... }, ... }
-
+                const processedData = {};
                 dadosFiltrados.forEach(row => {
                     let xLabel = row[eixoX] || '(vazio)';
                     if (eixoX === 'dia' && xLabel) xLabel = xLabel.split('T')[0];
-
                     let stackLabel = row[stackBy] || '(vazio)';
-
                     xLabelsSet.add(xLabel);
                     stackLabelsSet.add(stackLabel);
-
                     if (!processedData[xLabel]) processedData[xLabel] = {};
                     if (!processedData[xLabel][stackLabel]) processedData[xLabel][stackLabel] = 0;
-
                     let valor = row[eixoY];
                     if (typeof valor !== 'number') valor = 0;
                     processedData[xLabel][stackLabel] += valor;
                 });
-
                 labels = (eixoX === 'dia') ? Array.from(xLabelsSet).sort() : Array.from(xLabelsSet);
                 const stackLabels = Array.from(stackLabelsSet).sort();
-
                 datasets = stackLabels.map((stackLabel, i) => ({
                     label: stackLabel,
-                    // Mapeia os labels do eixo X para o valor deste stack
                     data: labels.map(label => processedData[label]?.[stackLabel] || 0), 
-                    backgroundColor: `hsl(${i * 37 % 360}, 70%, 60%)`, // Cor dinâmica
+                    backgroundColor: `hsl(${i * 37 % 360}, 70%, 60%)`,
                     borderRadius: 4
                 }));
             }
-
-            // --- Renderização do Gráfico de Barras ---
             if (barChart) barChart.destroy();
             barChart = new Chart(document.getElementById('barChart').getContext('2d'), {
                 type: 'bar',
@@ -813,45 +716,38 @@
                 options: {
                     responsive: true,
                     plugins: {
-                        legend: { display: isStacked }, // Mostra legenda se for empilhado
+                        legend: { display: isStacked },
                         tooltip: { enabled: true }
                     },
                     scales: {
                         x: { 
                             ticks: { color: '#011334' },
-                            stacked: isStacked // <<< ATIVA O EMPILHAMENTO
+                            stacked: isStacked
                         },
                         y: { 
                             beginAtZero: true, 
                             ticks: { color: '#011334' },
-                            stacked: isStacked // <<< ATIVA O EMPILHAMENTO
+                            stacked: isStacked
                         }
                     }
                 }
             });
-
             // === 2. Gráfico de Pizza (Agora usa dados filtrados) ===
             const cat = document.getElementById('pizza_categoria').value;
             const val = document.getElementById('pizza_valor').value;
-
             const pizzaLabelsSet = new Set();
             const pizzaData = {};
-
-            dadosFiltrados.forEach(row => { // Usa dadosFiltrados
+            dadosFiltrados.forEach(row => {
                 let label = row[cat];
                 if (!label) label = '(vazio)';
                 pizzaLabelsSet.add(label);
-
                 let valor = row[val];
                 if (typeof valor !== 'number') valor = 0;
-
                 if (!pizzaData[label]) pizzaData[label] = 0;
                 pizzaData[label] += valor;
             });
-
             const pizzaLabels = Array.from(pizzaLabelsSet);
             const pizzaValues = pizzaLabels.map(l => pizzaData[l]);
-
             if (pieChart) pieChart.destroy();
             pieChart = new Chart(document.getElementById('pieChart').getContext('2d'), {
                 type: 'pie',
